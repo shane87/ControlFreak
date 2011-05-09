@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:layout_width="fill_parent"
+  android:layout_height="45dip"
+  android:id="@+id/LinearLayout01">
+  
+  <TextView android:id="@+id/tvGroup" android:layout_width="fill_parent"
+            android:layout_height="45dip" android:text="Groups" android:gravity="center_vertical|left"
+            android:paddingLeft="5dip" android:paddingRight="5dip" android:layout_marginLeft="38dp"
+            android:textSize="14dip"></TextView>
+            
+</LinearLayout>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Control Freak</string>
+    <string name="schedulerHeader">Scheduler:</string>
+    <string name="freqHeader">Max CPU Frequency:</string>
+    <string name="cpuThreshHeader">CPU Threshold:</string>
+    <string name="governorHeader">Scaling Governor:</string>
+</resources>
