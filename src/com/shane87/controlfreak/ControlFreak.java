@@ -1,6 +1,7 @@
 package com.shane87.controlfreak;
 
 import com.shane87.controlfreak.R;
+import com.shane87.controlfreak.ShellInterface;
 
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Array;
@@ -60,8 +61,10 @@ public class ControlFreak extends ExpandableListActivity {
 	Map<String, String> 				stockVoltages = new HashMap<String, String>();
 	private String 						uvValues;
 	private String[] 					cpuThresValues;
-	private String 						cpuThres;
+	private int 						cpuThres;
 	private String						curGovernor;
+	private String						timeInState;
+	private boolean						statesAvailable = false;
 	
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -203,17 +206,7 @@ public class ControlFreak extends ExpandableListActivity {
 						public void onItemSelected(AdapterView<?> arg0,
 								View arg1, int arg2, long arg3)
 						{
-							switch((int)arg0.getSelectedItemId())
-							{
-							case 0:
-								cpuThres = "stock";
-								break;
-							case 1:
-								cpuThres = "performance";
-								break;
-							case 2:
-								cpuThres = "battery";
-							}
+							cpuThres = (int)arg0.getSelectedItemId();
 							
 						}
 
@@ -258,19 +251,13 @@ public class ControlFreak extends ExpandableListActivity {
         			schedSpinner.setSelection(activeSched);
         			
         			//next the cpuThresh spinner
-        			//stock is in the first position, 0
-        			if(cpuThres.contains("stock"))
-        				cpuTSpinner.setSelection(0);
-        			//performance is in the second position, 1
-        			else if(cpuThres.contains("performance"))
-        				cpuTSpinner.setSelection(1);
-        			//battery is in the third position, 2
-        			else if(cpuThres.contains("battery"))
-        				cpuTSpinner.setSelection(2);
-        			//if cpuThresh is anything else, then cpuThresh is not supported
-        			//so lets hide the cpuThresh views
-        			//NOTE: typically, cpuThresh should be either stock, battery, performance, or none
-        			//		this is just to catch anything else if it is not set correctly
+        			//as long as cpuThres is non-negative, the kernel supports cpuThresh settings
+        			//so we will set the spinner to the correct setting
+        			if(cpuThres >= 0)
+        				cpuTSpinner.setSelection(cpuThres);
+        			
+        			//if cpuThres is negative, either the kernel does not support cpuThresh settings
+        			//or we weren't able to get them, so we will hide the spinner, button, and text
         			else
         			{
         				findViewById(R.id.cpuThreshHelpButton).setVisibility(View.GONE);
@@ -349,8 +336,164 @@ public class ControlFreak extends ExpandableListActivity {
 					//otherwise, we are ready to begin!
 					else
 					{
+						//we start by calling getFreqVoltTable, which will pull all of our frequencies
+						//and their voltage settings and store them in our stockVoltages global
+						getFreqVoltTable();
 						
+						//now lets get our frequency list and tis info from getTimeInState()
+						String[] freqTable = getTimeInState();
+						
+						//then we can pass our tester string and the info returned above to store our
+						//frequencies and voltages in or fqStatsList
+						getFreqTable(tester, freqTable);
+						
+						//we need to check our states enabled table, to find out which states are
+						//enabled. this will let us set the initial state of the states checkboxes
+						//appropriately
+						getStates();
+						
+						try
+						{
+							//lets make our scheduler script to make setting scheduler changes easier
+							OutputStreamWriter out = new OutputStreamWriter(openFileOutput("sched.sh", 0));
+							out.write("#!/system/bin/sh\n# Set \"$1\" scheduler for stl, bml and mmc\nfor i in `ls /sys/block/stl*` /sys/block/bml* /sys/block/mmcblk*\ndo\necho \"$1\" > $i/queue/scheduler\ndone");
+							out.close();
+						}catch(java.io.IOException e){}
+						
+						//and don't forget to chmod it, or it won't execute!!
+						ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/" +
+												  "files/sched.sh");
+						
+						//now lets start setting up our spinner adapters, starting with freq
+						//first, we let android know what kind of spinner we will be attaching this to
+						adapterForFreqSpinner.setDropDownViewResource(
+								android.R.layout.simple_spinner_dropdown_item);
+						
+						//now we loop through all of our frequencies, and add the enabled states to the
+						//spinner
+						for(int i = 0; i < fqStatsList.size(); i++)
+							if(fqStatsList.get(i).getEnabled())
+								adapterForFreqSpinner.add(fqStatsList.get(i).getValue() + " mHz");
+						
+						//while we are on the subject of frequencies, lets go ahead and get our
+						//max frequency setting
+						maxFreq = ShellInterface.getProcessOutput(C_SCALING_MAX_FREQ);
+						//if we get a null string, we have root problems and wouldn't
+						//ever make it this far, but it is always best to check for the
+						//worst case scenario
+						if(maxFreq == null)
+							maxFreq = new String("");
+						if(maxFreq.equals(""))
+							maxFreq.concat("0 0");
+						
+						//trim the last four digits, since the max freq file stores
+						//the frequency in kHz instead of mHz
+						maxFreq = maxFreq.substring(0, maxFreq.length() - 4);
+						
+						//now, the same thing for schedulers, first set the proper spinner type
+						adapterForSchedSpinner.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+						//now lets get what spinners we have available, and the currently
+						//enabled one as well
+						String schedTableTmp = ShellInterface.getProcessOutput("cat /sys/block" +
+								                                            "/mmcblk0/queue/scheduler");
+						
+						//split individual entries into an array
+						schedTable = schedTableTmp.split(" ");
+						//then loop through the array
+						for(int i = 0; i < schedTable.length; i++)
+						{
+							//if the entry contains "[", it is our active scheduler, so lets note that
+							if(schedTable[i].contains("["))
+								activeSched = i;
+							//then add all of the schedulers to the adapter
+							adapterForSchedSpinner.add(schedTable[i]);
+						}
+						
+						//and now for the cpuThresh settings
+						//again, let android know what kind of spinner item it is
+						adapterForCpuTSpinner.setDropDownViewResource(
+								android.R.layout.simple_spinner_dropdown_item);
+						//then add the three supported settings
+						adapterForCpuTSpinner.add("Stock");
+						adapterForCpuTSpinner.add("Performance");
+						adapterForCpuTSpinner.add("Battery Saver");
+						
+						//now lets find out if we support cpuThres, and if so, what one we have set
+						String cpuThresTmp = ShellInterface.getProcessOutput(
+								"cat /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
+						//if we get an empty string, we either dont have cpuThres available, or we
+						//cant get the settings, so lets set cpuThres to a negative number
+						if(cpuThresTmp.equals(""))
+							cpuThres = -1;
+						else
+						{
+							//otherwise, lets go on and split the cpuThres values out into an array
+							String[] cpuThresVals = cpuThresTmp.split(" ");
+							//lets assume a default value of "Stock"
+							cpuThres = 0;
+							//if the first value is 30, we have performance settings, so lets note that
+							if(cpuThresVals[0].equals("30"))
+								cpuThres = 1;
+							//else if, the first and third settings are 55, we have battery
+							//saver settings, so lets note that
+							else if(cpuThresVals[0].equals("55") && cpuThresVals[2].equals("55"))
+								cpuThres = 2;
+							
+							try
+							{
+								//since we know we have cpuThres available, lets make our cpuThres apply
+								//scripts, starting with performance settings
+								OutputStreamWriter out = new OutputStreamWriter(openFileOutput(
+										"cpuT_performance.sh", 0));
+								out.write("#! /system/bin/sh\n" +
+										  "#Set Performace values to cpu_thres_table\n" +
+										  "echo 30 70 30 70 30 70 30 70 30 70 30 70 " +
+										  "30 70 30 70 30 70 30 70 30 70 30 70 30 70" +
+										  " > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
+								out.close();
+							}
+							catch(java.io.IOException e)
+							{
+							}
+							//and lets make it executable
+							ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/cpuT_performance.sh");
+							try
+							{
+								//now for the battery settings
+								OutputStreamWriter out = new OutputStreamWriter(openFileOutput(
+										"cpuT_battery.sh", 0));
+								out.write("#! /system/bin/sh\n" +
+										  "#Set Battery Saver values to cpu_thres_table\n" +
+										  "echo 55 80 55 90 55 90 55 90 55 90 55 90 " +
+										  "60 80 60 80 60 80 60 80 60 80 60 80 60 80" +
+										  " > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
+								out.close();
+							}
+							catch(java.io.IOException e)
+							{
+							}
+							ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/cpuT_battery.sh");
+							try
+							{
+								//and finally the stock settings
+								OutputStreamWriter out = new OutputStreamWriter(openFileOutput(
+										"cpuT_stock.sh", 0));
+								out.write("#! /system/bin/sh\n" +
+										  "#Set Stock values to cpu_thres_table\n" +
+										  "echo 55 80 50 90 50 90 50 90 40 90 40 90 " +
+										  "30 80 20 70 20 70 20 70 20 70 20 70 20 70" +
+										  " > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
+								out.close();
+							}
+							catch(java.io.IOException e)
+							{
+							}
+							ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/cpuT_stock.sh");
+						}
 					}
+					
+					//now that we have our info gathered, lets let the ui refresh
+					uiRefreshHandler.sendEmptyMessage(REFRESH);
 				}
 				//if tester IS null, we do not have su, so lets send the NOROOT message to the handler
 				//so it can notify the user
@@ -390,6 +533,70 @@ public class ControlFreak extends ExpandableListActivity {
 								                           new CheckBox(getBaseContext())));
 					}
 				}
+			}
+			
+			private String[] getTimeInState()
+			{
+				timeInState = ShellInterface.getProcessOutput(C_TIME_IN_STATE);
+				
+				if(timeInState == null)
+					timeInState = "";
+				if(timeInState == "")
+					timeInState.concat("0 0");
+				
+				String[] freqTable = timeInState.split(" ");
+				return freqTable;
+			}
+			
+			private void getFreqVoltTable()
+			{
+				String freqVoltTable = ShellInterface.getProcessOutput(C_FREQUENCY_VOLTAGE_TABLE);
+				
+				if(freqVoltTable == "")
+				{
+					stockVoltages.put("100", "950");
+					stockVoltages.put("200", "950");
+					stockVoltages.put("400", "1050");
+					stockVoltages.put("800", "1200");
+					stockVoltages.put("1000", "1275");
+					stockVoltages.put("1120", "1300");
+					stockVoltages.put("1200", "1300");
+				}
+				else
+				{
+					String[] tmpFreqVoltTable = freqVoltTable.split(" ");
+					String[] freqTable = new String[20];
+					String[] voltTable = new String[20];
+					
+					for(int i = 0, j = 0; i < tmpFreqVoltTable.length; i += 3, j++)
+					{
+						freqTable[j] = String.valueOf(tmpFreqVoltTable[i]);
+						voltTable[j] = String.valueOf(tmpFreqVoltTable[i + 1]);
+						stockVoltages.put(String.valueOf(tmpFreqVoltTable[i].
+								subSequence(0, tmpFreqVoltTable[i].length() - 3)),
+								String.valueOf(tmpFreqVoltTable[i + 1]));
+					}
+				}
+			}
+			
+			private boolean getStates()
+			{
+				String statesEnabledTemp = ShellInterface.getProcessOutput(C_STATES_ENABLED);
+				
+				try
+				{
+					String[] statesEnable = statesEnabledTemp.split(" ");
+					for(int i = 0; i < fqStatsList.size(); i++)
+					{
+						if(statesEnable[i].equals("1"))
+							fqStatsList.get(i).setEnabled(true);
+						else
+							fqStatsList.get(i).setEnabled(false);
+					}
+				}catch(Exception ignored){return false;}
+				
+				statesAvailable = true;
+				return true;
 			}
         	
         }).start();
