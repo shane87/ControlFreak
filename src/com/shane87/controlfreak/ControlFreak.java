@@ -527,54 +527,101 @@ public class ControlFreak extends ExpandableListActivity {
 				return;
 			}
 			
+			//ok, this function is designed to take the tester string, which has our uv values in it,
+			//and our freqTable array, which has our tis info and frequency info, and use these
+			//values to set up our fqStatsList arraylist
 			private void getFreqTable(String tester, String[] freqTable)
 			{
+				//a holder for our uv values, so we can split them down into individual values
 				String[] uvTable;
+				//lets store our tester string in or uvValues global variable, so we know what values
+				//have been modified by the user when it comes time to apply/save the settings
 				uvValues = tester;
+				//some holders for the integer values of our strings
+				//I added these to help track down why it was getting the wrong values for
+				//frequency. as it turns out, SUBTRACTING 1000 does NOT give the same results
+				//as I intended, since I intended to DIVIDE by 1000, lol
 				int freq, uv, tis;
+				
+				//if we don't have any uvValues. This should never happen, since
+				//uvValues is loaded from tester, and if tester is null, we will never reach
+				//this code. but we put it here just in case, to avoid null pointer exceptions
 				if(uvValues == null)
+					//if uvValues is new, lets make uvValues equal "" so we can trigger the next if
 					uvValues = new String("");
 				
+				//again, this shouldn't happen, since a tester value of "" will cause an incompatible
+				//kernel alert, and the above code, which would also trigger this, shouldnt happen either
+				//but just in case:
 				if(uvValues.equals(""))
 				{
+					//if we have no uv values, we will instantiate our fqStatsList array with 
+					//FrequencyStats members with the following settings:
+					//value of the frequency for each state
+					//0 for uv value
+					//value of the tis for each state
 					for(int i = 0; i < freqTable.length; i += 2)
 					{
-						fqStatsList.add(new FrequencyStats(Integer.parseInt(freqTable[i]) - 1000,
+						fqStatsList.add(new FrequencyStats(Integer.parseInt(freqTable[i]) / 1000,
 								                           0, 
 								                           Integer.parseInt(freqTable[i + 1]),
 								                           new CheckBox(getBaseContext())));
 					}
 				}
+				//else, we have uvValues, so lets get the fqStatsList setup right
 				else
 				{
+					//first, split the uvValues into individual strings, one for each freq
 					uvTable = uvValues.split(" ");
+					//now we loop through, pulling freq and tis from freqTable, and uv from uvTable
+					//i is incremented by 2 for each step, since freqTable[0] is the first freq and
+					//freqTable[1] is the tis for freqTable[0], freqTable[2] is the second freq, etc etc
+					//by using i to reference the freq, i + 1 to reference the tis, and i / 2 to access
+					//the the uv values, everything is pulled from the right place of each array
 					for(int i = 0; i < freqTable.length; i += 2)
 					{
 						freq = Integer.parseInt(freqTable[i]) / 1000;
 						uv = Integer.parseInt(uvTable[i / 2]);
 						tis = Integer.parseInt(freqTable[i + 1]);
+						//now that we have the int values of our settings, we can setup our
+						//fqStatsList entry
 						fqStatsList.add(new FrequencyStats(freq, uv, tis, new CheckBox(getBaseContext())));
 					}
 				}
 			}
 			
+			//this is used to get our time in state info, and our list of frequencies
+			//the value returned by this is used by getFreqTable to setup our fqStatsList
 			private String[] getTimeInState()
 			{
+				//ok, we will pull our tis string from the correct file, and store it in
+				//our global timeInState variable
 				timeInState = ShellInterface.getProcessOutput(C_TIME_IN_STATE);
 				
+				//this should never happen, since the return from getProcessOutput() should only
+				//be null when you have no root access, and that would be detected long before we get
+				//here. but the only thing you can always be sure of on these phones is that they
+				//will do as they please, so lets just be careful
 				if(timeInState == null)
 					timeInState = "";
 				if(timeInState == "")
 					timeInState.concat("0 0");
 				
+				//all that is left to do is spilt our timeInState string into an array, and return it
 				String[] freqTable = timeInState.split(" ");
 				return freqTable;
 			}
 			
+			//this function sets up our stockVoltages map, so we can refer to their stock value
+			//note that the "stock" value is actually their value when the app is launched, unless
+			//the kernel does not support uv, in which case the app should let them know
 			private void getFreqVoltTable()
 			{
+				//get our freq_volt_table, which has the frequencies and voltages listed
 				String freqVoltTable = ShellInterface.getProcessOutput(C_FREQUENCY_VOLTAGE_TABLE);
 				
+				//if we have no freq_volt_table, why are we still running?
+				//but it is best to be on the safe side
 				if(freqVoltTable == "")
 				{
 					stockVoltages.put("100", "950");
@@ -585,12 +632,20 @@ public class ControlFreak extends ExpandableListActivity {
 					stockVoltages.put("1120", "1300");
 					stockVoltages.put("1200", "1300");
 				}
+				//otherwise, we have a freq_volt_table, so we will populate our stock voltages
+				//map with the values we just got
 				else
 				{
+					//first, lets split one string into an array, with one entry per index
 					String[] tmpFreqVoltTable = freqVoltTable.split(" ");
+					//temp holders to split the frequencies from the voltages, since they
+					//are all mixed together in our first array
 					String[] freqTable = new String[20];
 					String[] voltTable = new String[20];
 					
+					//now we loop through our freqVoltTable, and store the frequencies and 
+					//voltages as indicated above, then remove the last three zeros from the frequency
+					//and store the values in our map
 					for(int i = 0, j = 0; i < tmpFreqVoltTable.length; i += 3, j++)
 					{
 						freqTable[j] = String.valueOf(tmpFreqVoltTable[i]);
@@ -601,13 +656,20 @@ public class ControlFreak extends ExpandableListActivity {
 				}
 			}
 			
+			//ok, in this function, we will get our states enabled info, so that we can
+			//set our states to the correct enabled/disabled setting
 			private boolean getStates()
 			{
+				//get the string from the states_enabled_table file
 				String statesEnabledTemp = ShellInterface.getProcessOutput(C_STATES_ENABLED);
 				
 				try
 				{
+					//we put all of this in a try catch block, instead of checking for null values
+					//split the string into an array, and if the string is null, we will get an exception
+					//to be caught, then ignored, by the catch block
 					String[] statesEnable = statesEnabledTemp.split(" ");
+					//now loop through and enable the enabled states, and disable the disabled states
 					for(int i = 0; i < fqStatsList.size(); i++)
 					{
 						if(statesEnable[i].equals("1"))
@@ -617,6 +679,8 @@ public class ControlFreak extends ExpandableListActivity {
 					}
 				}catch(Exception ignored){return false;}
 				
+				//just before we return, we will set statesAvailable to true, to keep from
+				//having to call this again
 				statesAvailable = true;
 				return true;
 			}
@@ -624,36 +688,52 @@ public class ControlFreak extends ExpandableListActivity {
         }).start();
     }
     
+    //lets setup our menu when the user presses the menu button
     @Override
     public boolean onCreateOptionsMenu(Menu menu)
     {
+    	//copy the menu value into our mMenu global, so we can reference it later
     	mMenu = menu;
+    	//now lets get an inflater for our menu
     	MenuInflater inflater = getMenuInflater();
+    	//and inflate the main menu
     	inflater.inflate(R.layout.menu, mMenu);
     	
     	return true;
     }
     
+    //this controls our menu interface, to complete the actions the user selects
     @Override
 	public boolean onOptionsItemSelected(MenuItem item) {
+    	//ok, we will switch on the id of the menu item selected, so we know what to o
 		switch (item.getItemId()) {
 		case (R.id.exit): {
+			//if they press exit, we will simply call finish() on our app, which will let the
+			//os know it can destroy our app and free up its used memory
 			this.finish();
 			return true;
 		}
 		case (R.id.apply): {
+			//if they press apply, we will call applySettings() to make the current settings
+			//active
 			applySettings();
 			return true;
 		}
 		case (R.id.boot): {
+			//if they press Save as Boot Settings, we will call saveBootSettings() to write the current
+			//settings to S_volt_scheduler and copy it to /etc/init.d
 			saveBootSettings();
 			return true;
 		}
 		case (R.id.noboot): {
+			//if they press Delete Boot Settings, we will call deleteBootSettings() to remove
+			//S_volt_scheduler from /etc/init.d
 			deleteBootSettings();
 			return true;
 		}
 		case (R.id.about): {
+			//if they press About, we will call showAboutScreen() to build the About dialog
+			//and display it to the user
 			showAboutScreen();
 			return true;
 		}
@@ -661,6 +741,15 @@ public class ControlFreak extends ExpandableListActivity {
 		return true;
 
 	}
+    
+    //this will get the newest tis info. not sure if we still need this, since the
+    //app doesn't really have a way to call for an update. this function was
+    //used in VCEX to update the times every time the States drawer was opened
+    //since we have no States drawer, there is currently no way to update tis info,
+    //but i left this in, because I might add a main menu item to allow users
+    //to update the tis info. works basically the same as getTimeInStates() above, but
+    //uses an if/else block instead of a try/catch block, and it also calls setTIS() for
+    //each entry in fqStatsList, instead of putting in the value in a different function
     public void getTimes()
     {
     	String timesTmp = ShellInterface.getProcessOutput(C_TIME_IN_STATE);
@@ -676,29 +765,45 @@ public class ControlFreak extends ExpandableListActivity {
     	}
     }
     
+    //this is called when the user presses Apply Settings for Now
     private void applySettings()
     {
+    	//first, set the uv settings, by calling buildUVCommand() and passing its string
+    	//to ShellInterface
     	ShellInterface.runCommand(buildUVCommand());
+    	//Then we will set our scheduler, by calling our sched script, and passing it the
+    	//scheduler we want to activate
     	ShellInterface.runCommand("/data/data/com.shane87.controlfreak/files/sched.sh "
     			+ schedTable[activeSched]);
+    	//Now we put our max cpu limit in the correct file
     	ShellInterface.runCommand("echo \"" + maxFreq.split(" ")[0] 
     	                        + "000\" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq");
+    	//Call setStates() to echo the states info to the proper file
     	setStates();
+    	//Call the appropriate cpuT script, if we have cpu threshold settings active
     	if(cpuThres == 0)
     		ShellInterface.runCommand("/data/data/com.shane87.controlfreak/files/cpuT_stock.sh");
     	else if(cpuThres == 1)
     		ShellInterface.runCommand("/data/data/com.shane87.controlfreak/files/cpuT_performance.sh");
     	else if(cpuThres == 2)
     		ShellInterface.runCommand("/data/data/com.shane87.controlfreak/files/cpuT_battery.sh");
+    	//Echo our currently selected governor to the correct file
     	ShellInterface.runCommand("echo \"" + curGovernor + "\" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
+    	//finally, echo 1 to the update_states file, so the kernel knows to use our new
+    	//settings
     	ShellInterface.runCommand("echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/update_states");
     }
     
+    //this function builds our states enabled command, which is used by setStates() to set the
+    //states enabled correctly
     private StringBuilder buildStatesEnabledCommand()
     {
+    	//make our string builder, and put in the echo command
     	StringBuilder command = new StringBuilder();
     	command.append("echo \"");
     	
+    	//loop through the fqStatsList and put a 1 for enabled states and a 0 for disabled
+    	//states
     	for(int i = 0; i < fqStatsList.size(); i++)
     	{
     		if(fqStatsList.get(i).getEnabled())
@@ -707,22 +812,29 @@ public class ControlFreak extends ExpandableListActivity {
     			command.append("0 ");
     	}
     	
+    	//finally, add the path to the states_enabled_table file and return our string builder
     	command.append("\" > /sys/devices/system/cpu/cpu0/cpufreq/states_enabled_table");
     	return command;
     }
     
+    //this function builds our uv command, to echo the uv setings to the correct file
     private String buildUVCommand()
     {
+    	//get our string builder, and add echo
     	StringBuilder command = new StringBuilder();
     	command.append("echo \"");
     	
+    	//add our uv settings, by looping through fqStatsList and getting the uv values
     	for(int i = 0; i < fqStatsList.size(); i++)
     		command.append(fqStatsList.get(i).getUV() + " ");
     	
+    	//finally, add the path to the UV_mV_table, and return the string from the builder
     	command.append("\" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table");
     	return command.toString();
     }
     
+    //this function simply calls the buildStatesEnabled() function, then passes that string
+    //to the shellInterface to set the states
     private void setStates()
     {
     	StringBuilder command = buildStatesEnabledCommand();
@@ -730,23 +842,34 @@ public class ControlFreak extends ExpandableListActivity {
     	ShellInterface.runCommand(command.toString());
     }
     
+    //this is called when the user presses delete boot settings
     private void deleteBootSettings() 
     {
+    	//if there is no S_volt_scheduler file, there is nothing to delete
+    	//so we let the user know
 		if (!ShellInterface.getProcessOutput("ls /etc/init.d/").contains("S_volt_scheduler")) 
 			Toast.makeText(this, "No settings file present!", Toast.LENGTH_SHORT).show();
 		else
 		{
+			//if there is a S_volt_scheduler file, we need to remount /system as rw, since
+			// /etc is simply a symlink to /system/etc
 			ShellInterface.runCommand("busybox mount -o remount,rw  /system");
+			//then we can delete S_volt_scheduler
 			ShellInterface.runCommand("rm /etc/init.d/S_volt_scheduler");
+			//finally, remount /system as ro, and let the user know it is deleted
 			ShellInterface.runCommand("busybox mount -o remount,ro  /system");
 			Toast.makeText(this, "Settings deleted!", Toast.LENGTH_SHORT).show();
 		}
 	}
     
+    //this is called when the user presses save as boot settings
     private void saveBootSettings() {
 		try 
 		{
+			//lets get an output stream writer, and create S_volt_scheduler
 			OutputStreamWriter out = new OutputStreamWriter(openFileOutput("S_volt_scheduler", 0));
+			//now lets create a tmp string with all of our settings in it, except for cpuThresh
+			//and the governor settings, they are added later
 			String tmp = "#!/system/bin/sh\n\nLOG_FILE=/data/volt_scheduler.log\nrm -Rf $LOG_FILE\n\necho \"Starting Insanity Volt Scheduler $( date +\"%m-%d-%Y %H:%M:%S\" )\" | tee -a $LOG_FILE;\n\necho \"Set UV\" | tee -a $LOG_FILE; \n"
 					+ buildUVCommand()
 					+ "\necho \"\"\necho \"---------------\"\n\necho \"Set MAX Scaling Frequency\" | tee -a $LOG_FILE; \necho \""
@@ -757,6 +880,7 @@ public class ControlFreak extends ExpandableListActivity {
 					+ schedTable[activeSched]
 					+ "\" > $i/queue/scheduler;\n\techo \"$i/queue/scheduler\";\n\techo \"---------------\";\ndone;\n\necho \"Insanity Volt Scheduler finished at $( date +\"%m-%d-%Y %H:%M:%S\" )\" | tee -a $LOG_FILE;\n";
 			
+			//now add the cpuThresh settings, if they are available
 			if(cpuThres == 0)
 				tmp = tmp.concat("\necho \"Setting stock cpu_thres values!\" | tee -a $LOG_FILE;" +
 						"\necho \"55 80 50 90 50 90 50 90 40 90 40 90 " +
@@ -776,31 +900,47 @@ public class ControlFreak extends ExpandableListActivity {
 						" > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table" +
 						"\necho \"Settings saved!\" | tee -a $LOG_FILE;\n");
 			
+			//finally, add the governor settings
 			tmp = tmp.concat("\necho \"Setting current governor\" | tee -a $LOG_FILE;\n" +
 							 "echo \"" + curGovernor + "\" >" +
 							 " /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor\n" +
-							 "echo \"Current Governor Set\" | tee -a $LOG_FILE;\n");
+			
+			"echo \"Current Governor Set\" | tee -a $LOG_FILE;\n");
+			//write the tmp string to the file and close the file
 			out.write(tmp);
 			out.close();
 		} catch (java.io.IOException e) {
+			//if there is a problem, let the user know
 			Toast.makeText(this, "ERROR: file not saved!", Toast.LENGTH_LONG)
 					.show();
 		}
 
+		//now we chmod the script to make it executable
 		ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/S_volt_scheduler");
+		//mount system as rw
 		ShellInterface.runCommand("busybox mount -o remount,rw  /system");
+		//make the /etc/init.d folder if it is not already there
 		ShellInterface.runCommand("mkdir /etc/init.d");
+		//copy the S_volt_scheduler file to init.d
 		ShellInterface.runCommand("busybox cp /data/data/com.shane87.controlfreak/files/S_volt_scheduler /etc/init.d/S_volt_scheduler");
+		//mount system as ro
 		ShellInterface.runCommand("busybox mount -o remount,ro  /system");
+		//let the user know we saved the file
 		Toast.makeText(this, "Settings saved in file \"/etc/init.d/S_volt_scheduler\"", Toast.LENGTH_LONG).show();
 	}
     
+    //called when the user presses About
     private void showAboutScreen() {
+    	//get a new AlertDialog builder
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		//set the title (for some reason it is set twice, not sure, may remove it)
 		builder.setTitle(R.string.app_name);
+		//set the message, and the title again
 		builder.setMessage(R.string.aboutText);
 		builder.setTitle("About Control Freak "
 				+ getResources().getText(R.string.version));
+		//create the negative button, to close the dialog, along with the onClickListener
+		//which does nothing so that the dialog will close
 		builder.setNegativeButton("Back",
 				new DialogInterface.OnClickListener() {
 
@@ -808,6 +948,8 @@ public class ControlFreak extends ExpandableListActivity {
 					public void onClick(DialogInterface dialog, int id) {
 					}
 				});
+		//set the neutral button, and the onClickListener, which will create an intent
+		//with the url to my xda thread so the user can visit me on xda
 		builder.setNeutralButton("Visit us on XDA",
 				new DialogInterface.OnClickListener() {
 
@@ -819,6 +961,8 @@ public class ControlFreak extends ExpandableListActivity {
 						startActivity(i);
 					}
 				});
+		//set the positive button, with the onClickListener which will create an intent
+		//with the url to my xda donate button, so the user can make a donation
 		builder.setPositiveButton("Donate to author",
 				new DialogInterface.OnClickListener() {
 
@@ -831,14 +975,20 @@ public class ControlFreak extends ExpandableListActivity {
 					}
 				});
 
+		//create the alert dialog
 		AlertDialog alert = builder.create();
 
+		//show the alert dialog
 		alert.show();
 	}
     
+    //called when the user has no root access
     private void showNoRootAlert() {
+    	//create an alert builder
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		//set the message
 		builder.setMessage(R.string.nosuText);
+		//set the negative buton to exit the app, along with the onClickListener
 		builder.setNegativeButton("Exit",
 				new DialogInterface.OnClickListener() {
 
@@ -847,6 +997,8 @@ public class ControlFreak extends ExpandableListActivity {
 						finish();
 					}
 				});
+		//set the neutral button, with a link to my xda thread
+		//also create the onClickListener
 		builder.setNeutralButton("More info",
 				new DialogInterface.OnClickListener() {
 
@@ -859,13 +1011,19 @@ public class ControlFreak extends ExpandableListActivity {
 						finish();
 					}
 				});
+		//set the title
 		builder.setTitle("No root available");
+		//make it so that closing the dialog will always close the app
 		builder.setCancelable(false);
+		//create the dialog
 		AlertDialog alert = builder.create();
-
+		//show the dialog
 		alert.show();
 	}
     
+    //called when the user presses the help button beside scheduler settings
+    //exactly like above, except that there is no need for onClickListeners
+    //and the dialog is cancelable
     private void showSchedHelp() {
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage(R.string.schedHelpText);
@@ -876,6 +1034,7 @@ public class ControlFreak extends ExpandableListActivity {
 		alert.show();
 	}
     
+    //same as above, only for the frequency limit help button
     private void showFreqLimitHelp() {
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage(R.string.freqHelpText);
@@ -886,6 +1045,7 @@ public class ControlFreak extends ExpandableListActivity {
 		alert.show();
 	}
     
+    //and again for the cpu threshold help button
     private void showThresLimitHelp()
 	{
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -897,6 +1057,7 @@ public class ControlFreak extends ExpandableListActivity {
 		alert.show();
 	}
     
+    //and one last time for the governor help button
     private void showGovLimitHelp()
 	{
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -908,6 +1069,9 @@ public class ControlFreak extends ExpandableListActivity {
 		alert.show();
 	}
     
+    //called when the user has an incompatible kernel
+    //identical to the showNoRootAlert()
+    //neutral button links to existz's Talon kernel thread
     private void showWrongKernelAlert() {
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage(R.string.bkernelText);
