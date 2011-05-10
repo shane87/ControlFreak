@@ -10,13 +10,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.app.ExpandableListActivity;
 import android.app.ProgressDialog;
+import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.AdapterView.OnItemSelectedListener;
@@ -25,6 +31,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ExpandableListAdapter;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 public class ControlFreak extends ExpandableListActivity {
 	//Command strings to pass to ShellInterface to get various values
@@ -36,6 +43,7 @@ public class ControlFreak extends ExpandableListActivity {
 	protected static final String C_SCALING_MAX_FREQ = "toolbox cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq";
 	//Command to enumerate list of available governors
 	protected static final String C_GOVERNORS_AVAILABLE = "toolbox cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors";
+	protected static final String C_CUR_GOVERNOR = "toolbox cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor";
 	
 	//Kernel Support flags, copied as is from xan's VoltageControl app
 	protected static final int 	  K_FREQUENCY_VOLTAGE_TABLE_CAP = 5;
@@ -107,7 +115,7 @@ public class ControlFreak extends ExpandableListActivity {
 			public void onClick(View v)
 			{
 				//Call our showSchedHelp() function to display the help associated with the scheduler
-				//showSchedHelp();
+				showSchedHelp();
 				
 			}
 		});
@@ -119,8 +127,8 @@ public class ControlFreak extends ExpandableListActivity {
 			@Override
 			public void onClick(View v)
 			{
-				//Call our showFreqHelp() function to display the frequency limit help
-				//showFreqHelp();
+				//Call our showFreqLimitHelp() function to display the frequency limit help
+				showFreqLimitHelp();
 				
 			}
 		});
@@ -132,8 +140,8 @@ public class ControlFreak extends ExpandableListActivity {
 			@Override
 			public void onClick(View v)
 			{
-				//Call our showCpuTHelp() function to display the cpu threshold help
-				//showCpuTHelp();
+				//Call our showThresLimitHelp() function to display the cpu threshold help
+				showThresLimitHelp();
 				
 			}
 		});
@@ -145,8 +153,8 @@ public class ControlFreak extends ExpandableListActivity {
 			@Override
 			public void onClick(View v)
 			{
-				//Call our showGovHelp() function to display the governor help
-				//showGovHelp();
+				//Call our showGovLimitHelp() function to display the governor help
+				showGovLimitHelp();
 				
 			}
 		});
@@ -274,11 +282,11 @@ public class ControlFreak extends ExpandableListActivity {
         			
         			//now lets set the freqSpinner, first we call for the current max frequency,
         			//then we will loop through the available frequencies to pick the right one
-        			String maxCpu = ""; //= getMaxFreq();
-        			//dont forget to take 4 digits from the end, since the getMaxFreq() function
-        			//simply returns the contents of scaling_max_frequency file, which has the
-        			//currently set max frequency in hz
-        			//maxCpu = maxCpu.substring(0, maxCpu.length() - 4);
+        			String maxCpu = ShellInterface.getProcessOutput(C_SCALING_MAX_FREQ);
+        			//dont forget to take 4 digits from the end, since we are
+        			//simply getting the contents of scaling_max_frequency file, which has the
+        			//currently set max frequency in khz
+        			maxCpu = maxCpu.substring(0, maxCpu.length() - 4);
         			
         			for(int i = 0; i < freqSpinner.getCount(); i++)
         			{
@@ -288,17 +296,23 @@ public class ControlFreak extends ExpandableListActivity {
         					break;
         				}
         			}
+        			for(int i = 0; i < govSpinner.getCount(); i++)
+        				if(govSpinner.getItemAtPosition(i).toString().matches(curGovernor))
+        				{
+        					govSpinner.setSelection(i);
+        					break;
+        				}
         			
         			break;
         		}
         		case NOROOT:
         		{
-        			//showNoRootAlert();
+        			showNoRootAlert();
         			break;
         		}
         		case WRONGKERNEL:
         		{
-        			//showWrongKernelAlert();
+        			showWrongKernelAlert();
         			break;
         		}
         		}
@@ -492,6 +506,14 @@ public class ControlFreak extends ExpandableListActivity {
 						}
 					}
 					
+					//finally, lets get our list of available governors
+					String availGov = ShellInterface.getProcessOutput(C_GOVERNORS_AVAILABLE);
+					curGovernor = ShellInterface.getProcessOutput(C_CUR_GOVERNOR);
+					String[] availGovAr = availGov.split(" ");
+					
+					for(int i = 0; i < availGovAr.length; i++)
+						adapterForGovSpinner.add(availGovAr[i]);
+					
 					//now that we have our info gathered, lets let the ui refresh
 					uiRefreshHandler.sendEmptyMessage(REFRESH);
 				}
@@ -601,4 +623,318 @@ public class ControlFreak extends ExpandableListActivity {
         	
         }).start();
     }
+    
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
+    	mMenu = menu;
+    	MenuInflater inflater = getMenuInflater();
+    	inflater.inflate(R.layout.menu, mMenu);
+    	
+    	return true;
+    }
+    
+    @Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		switch (item.getItemId()) {
+		case (R.id.exit): {
+			this.finish();
+			return true;
+		}
+		case (R.id.apply): {
+			applySettings();
+			return true;
+		}
+		case (R.id.boot): {
+			saveBootSettings();
+			return true;
+		}
+		case (R.id.noboot): {
+			deleteBootSettings();
+			return true;
+		}
+		case (R.id.about): {
+			showAboutScreen();
+			return true;
+		}
+		}
+		return true;
+
+	}
+    public void getTimes()
+    {
+    	String timesTmp = ShellInterface.getProcessOutput(C_TIME_IN_STATE);
+    	if(timesTmp == null)
+    		return;
+    	else
+    	{
+    		String[] times = timesTmp.split(" ");
+    		for(int i = 0, j = 1; i < fqStatsList.size(); i++, j += 2)
+    		{
+    			fqStatsList.get(i).setTIS(Integer.valueOf(times[j]));
+    		}
+    	}
+    }
+    
+    private void applySettings()
+    {
+    	ShellInterface.runCommand(buildUVCommand());
+    	ShellInterface.runCommand("/data/data/com.shane87.controlfreak/files/sched.sh "
+    			+ schedTable[activeSched]);
+    	ShellInterface.runCommand("echo \"" + maxFreq.split(" ")[0] 
+    	                        + "000\" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq");
+    	setStates();
+    	if(cpuThres == 0)
+    		ShellInterface.runCommand("/data/data/com.shane87.controlfreak/files/cpuT_stock.sh");
+    	else if(cpuThres == 1)
+    		ShellInterface.runCommand("/data/data/com.shane87.controlfreak/files/cpuT_performance.sh");
+    	else if(cpuThres == 2)
+    		ShellInterface.runCommand("/data/data/com.shane87.controlfreak/files/cpuT_battery.sh");
+    	ShellInterface.runCommand("echo \"" + curGovernor + "\" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
+    	ShellInterface.runCommand("echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/update_states");
+    }
+    
+    private StringBuilder buildStatesEnabledCommand()
+    {
+    	StringBuilder command = new StringBuilder();
+    	command.append("echo \"");
+    	
+    	for(int i = 0; i < fqStatsList.size(); i++)
+    	{
+    		if(fqStatsList.get(i).getEnabled())
+    			command.append("1 ");
+    		else
+    			command.append("0 ");
+    	}
+    	
+    	command.append("\" > /sys/devices/system/cpu/cpu0/cpufreq/states_enabled_table");
+    	return command;
+    }
+    
+    private String buildUVCommand()
+    {
+    	StringBuilder command = new StringBuilder();
+    	command.append("echo \"");
+    	
+    	for(int i = 0; i < fqStatsList.size(); i++)
+    		command.append(fqStatsList.get(i).getUV() + " ");
+    	
+    	command.append("\" > /sys/devices/system/cpu/cpu0/cpufreq/UV_mV_table");
+    	return command.toString();
+    }
+    
+    private void setStates()
+    {
+    	StringBuilder command = buildStatesEnabledCommand();
+    	
+    	ShellInterface.runCommand(command.toString());
+    }
+    
+    private void deleteBootSettings() 
+    {
+		if (!ShellInterface.getProcessOutput("ls /etc/init.d/").contains("S_volt_scheduler")) 
+			Toast.makeText(this, "No settings file present!", Toast.LENGTH_SHORT).show();
+		else
+		{
+			ShellInterface.runCommand("busybox mount -o remount,rw  /system");
+			ShellInterface.runCommand("rm /etc/init.d/S_volt_scheduler");
+			ShellInterface.runCommand("busybox mount -o remount,ro  /system");
+			Toast.makeText(this, "Settings deleted!", Toast.LENGTH_SHORT).show();
+		}
+	}
+    
+    private void saveBootSettings() {
+		try 
+		{
+			OutputStreamWriter out = new OutputStreamWriter(openFileOutput("S_volt_scheduler", 0));
+			String tmp = "#!/system/bin/sh\n\nLOG_FILE=/data/volt_scheduler.log\nrm -Rf $LOG_FILE\n\necho \"Starting Insanity Volt Scheduler $( date +\"%m-%d-%Y %H:%M:%S\" )\" | tee -a $LOG_FILE;\n\necho \"Set UV\" | tee -a $LOG_FILE; \n"
+					+ buildUVCommand()
+					+ "\necho \"\"\necho \"---------------\"\n\necho \"Set MAX Scaling Frequency\" | tee -a $LOG_FILE; \necho \""
+					+ maxFreq.split(" ")[0]
+					+ "000\" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq\necho \"\"\necho \"---------------\"\n\necho \"Select Enabled States\" | tee -a $LOG_FILE; \n"
+					+ buildStatesEnabledCommand()
+					+ "\necho \"\"\necho \"---------------\"\n\necho \"Set Scheduler for stl, bml and mmc\" | tee -a $LOG_FILE; \n    \nfor i in `ls /sys/block/stl*` /sys/block/bml* /sys/block/mmcblk* ; do\n\techo \""
+					+ schedTable[activeSched]
+					+ "\" > $i/queue/scheduler;\n\techo \"$i/queue/scheduler\";\n\techo \"---------------\";\ndone;\n\necho \"Insanity Volt Scheduler finished at $( date +\"%m-%d-%Y %H:%M:%S\" )\" | tee -a $LOG_FILE;\n";
+			
+			if(cpuThres == 0)
+				tmp = tmp.concat("\necho \"Setting stock cpu_thres values!\" | tee -a $LOG_FILE;" +
+						"\necho \"55 80 50 90 50 90 50 90 40 90 40 90 " +
+						"30 80 20 70 20 70 20 70 20 70 20 70 20 70\"" +
+						" > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table" +
+						"\necho \"Settings saved!\" | tee -a $LOG_FILE;\n");
+			else if(cpuThres == 1)
+				tmp = tmp.concat("\necho \"Setting performance cpu_thres values!\" | tee -a $LOG_FILE;" +
+						"\necho \"30 70 30 70 30 70 30 70 30 70 30 70 " +
+						"30 70 30 70 30 70 30 70 30 70 30 70 30 70\"" +
+						" > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table" +
+						"\necho \"Settings saved!\" | tee -a $LOG_FILE;\n");
+			else if(cpuThres == 2)
+				tmp = tmp.concat("\necho \"Setting battery saver cpu_thres values!\" | tee -a $LOG_FILE;" +
+						"\necho \"55 80 55 90 55 90 55 90 55 90 55 90 " +
+						"60 80 60 80 60 80 60 80 60 80 60 80 60 80\"" +
+						" > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table" +
+						"\necho \"Settings saved!\" | tee -a $LOG_FILE;\n");
+			
+			tmp = tmp.concat("\necho \"Setting current governor\" | tee -a $LOG_FILE;\n" +
+							 "echo \"" + curGovernor + "\" >" +
+							 " /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor\n" +
+							 "echo \"Current Governor Set\" | tee -a $LOG_FILE;\n");
+			out.write(tmp);
+			out.close();
+		} catch (java.io.IOException e) {
+			Toast.makeText(this, "ERROR: file not saved!", Toast.LENGTH_LONG)
+					.show();
+		}
+
+		ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/S_volt_scheduler");
+		ShellInterface.runCommand("busybox mount -o remount,rw  /system");
+		ShellInterface.runCommand("mkdir /etc/init.d");
+		ShellInterface.runCommand("busybox cp /data/data/com.shane87.controlfreak/files/S_volt_scheduler /etc/init.d/S_volt_scheduler");
+		ShellInterface.runCommand("busybox mount -o remount,ro  /system");
+		Toast.makeText(this, "Settings saved in file \"/etc/init.d/S_volt_scheduler\"", Toast.LENGTH_LONG).show();
+	}
+    
+    private void showAboutScreen() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setTitle(R.string.app_name);
+		builder.setMessage(R.string.aboutText);
+		builder.setTitle("About Control Freak "
+				+ getResources().getText(R.string.version));
+		builder.setNegativeButton("Back",
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int id) {
+					}
+				});
+		builder.setNeutralButton("Visit us on XDA",
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int id) {
+						String url = "http://forum.xda-developers.com/showthread.php?t=1030994";
+						Intent i = new Intent(Intent.ACTION_VIEW);
+						i.setData(Uri.parse(url));
+						startActivity(i);
+					}
+				});
+		builder.setPositiveButton("Donate to author",
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int id) {
+						String url = "http://forum.xda-developers.com/donatetome.php?u=3482571";
+						Intent i = new Intent(Intent.ACTION_VIEW);
+						i.setData(Uri.parse(url));
+						startActivity(i);
+					}
+				});
+
+		AlertDialog alert = builder.create();
+
+		alert.show();
+	}
+    
+    private void showNoRootAlert() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setMessage(R.string.nosuText);
+		builder.setNegativeButton("Exit",
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int id) {
+						finish();
+					}
+				});
+		builder.setNeutralButton("More info",
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int id) {
+						String url = "http://forum.xda-developers.com/showthread.php?t=1030994";
+						Intent i = new Intent(Intent.ACTION_VIEW);
+						i.setData(Uri.parse(url));
+						startActivity(i);
+						finish();
+					}
+				});
+		builder.setTitle("No root available");
+		builder.setCancelable(false);
+		AlertDialog alert = builder.create();
+
+		alert.show();
+	}
+    
+    private void showSchedHelp() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setMessage(R.string.schedHelpText);
+				builder.setTitle(R.string.schedHelpHeader);
+				builder.setNeutralButton("Ok", null);
+		builder.setCancelable(true);
+		AlertDialog alert = builder.create();
+		alert.show();
+	}
+    
+    private void showFreqLimitHelp() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setMessage(R.string.freqHelpText);
+				builder.setTitle(R.string.freqHelpHeader);
+				builder.setNeutralButton("Ok", null);
+		builder.setCancelable(true);
+		AlertDialog alert = builder.create();
+		alert.show();
+	}
+    
+    private void showThresLimitHelp()
+	{
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setMessage(R.string.cpuThresHelp);
+				builder.setTitle(R.string.cpuThresHelpHeader);
+				builder.setNeutralButton("Ok", null);
+		builder.setCancelable(true);
+		AlertDialog alert = builder.create();
+		alert.show();
+	}
+    
+    private void showGovLimitHelp()
+	{
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setMessage(R.string.govHelpText);
+				builder.setTitle(R.string.govHelpText);
+				builder.setNeutralButton("Ok", null);
+		builder.setCancelable(true);
+		AlertDialog alert = builder.create();
+		alert.show();
+	}
+    
+    private void showWrongKernelAlert() {
+		AlertDialog.Builder builder = new AlertDialog.Builder(this);
+		builder.setMessage(R.string.bkernelText);
+		builder.setNegativeButton("Exit",
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int id) {
+						finish();
+					}
+				});
+		builder.setNeutralButton("Get kernel from XDA",
+				new DialogInterface.OnClickListener() {
+
+					@Override
+					public void onClick(DialogInterface dialog, int id) {
+						String url = "http://forum.xda-developers.com/showthread.php?t=930679";
+						Intent i = new Intent(Intent.ACTION_VIEW);
+						i.setData(Uri.parse(url));
+						startActivity(i);
+						finish();
+					}
+				});
+		builder.setTitle("Unsupported kernel detected");
+		builder.setCancelable(false);
+		AlertDialog alert = builder.create();
+
+		alert.show();
+	}
 }

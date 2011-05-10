@@ -5,4 +5,33 @@
     <string name="freqHeader">Max CPU Frequency:</string>
     <string name="cpuThreshHeader">CPU Threshold:</string>
     <string name="governorHeader">Scaling Governor:</string>
+    <string name="aboutText">Control Freak by shane87 @ xda-developers.com\n
+    Tweaking utility for OverClocking Samsung Galaxy S phones running Gingerbread\n
+    Has been designed for use with the Captivate, running a ported i9000 kernel + rom\n
+    Specifically designed around existz\'s Talon kernel\n
+    If you are using a different kernel, some features MAY NOT WORK!!\n\n
+    May work on other Galaxy S phones, but HAS NOT BEEN TESTED!!\n
+    Requires proper kernel installed!!\n\n
+    For more info go to XDA.\n
+    A HUGE thank you to the following:\n
+    existz  @ xda-developers.com\n
+    y3ttr   @ xda-developers.com\n
+    kodos96 @ xda-developers.com\n
+    xan     @ xda-developers.com\n
+    And to anyone who uses this app, especially if you leave feedback!!</string>
+    <string name="bkernelText">You are running a incompatible kernel. To to get one head to XDA</string>
+    <string name="nosuText">Your device is not rooted or you have not accepted superuser prompt. To accept launch it again. More information on XDA.</string>
+	<string name="statesHelpText">Tick the frequencies you want to be used.</string>
+	<string name="schedHelpHeader">What is a scheduler?</string>
+	<string name="schedHelpText">This item allows you to select a way to organize an I/O (input/output) queue. Suggested: noop (simplest, less overhead) or BFQ (CFQ if not supported in kernel). Doesn\'t seem to have large impact on performance. </string>
+	<string name="freqHelpHeader">Clock limit setting</string>
+	<string name="freqHelpText">This item allows you to limit max clock to specific value. The processor wont run faster, even with higher states selected.</string>
+	<string name="setValues">Set values!</string>
+	<string name="mhzVoltage">Mhz voltage:</string>
+	<string name="hello">Voltage Control for Captivate</string>
+	<string name="version">0.0</string>
+	<string name="cpuThresHelp">Select the desired CPU Threshold settings. These settings affect how your CPU decides when to scale the speed up or down, and has an effect on performance and battery life</string>
+	<string name="cpuThresHelpHeader">CPU Threshold Help</string>
+	<string name="govHelpHeader">Governor Settings</string>
+	<string name="govHelpText">The selected Governor decides when and how to scale your cpu speed up or down. Different governors cause the cpu to behave differently, and therefore have an enormous impact on system stability, speed, and battery consumption.\n\nThe recommended governor is interactive or ondemand, unless you are running FroYo, then ONLY use conservative, as no other governor plays nice with FroYo!\n\nFor more info, see xda.</string>
 </resources>
