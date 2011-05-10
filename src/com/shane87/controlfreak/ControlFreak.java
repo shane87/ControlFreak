@@ -531,6 +531,7 @@ public class ControlFreak extends ExpandableListActivity {
 			{
 				String[] uvTable;
 				uvValues = tester;
+				int freq, uv, tis;
 				if(uvValues == null)
 					uvValues = new String("");
 				
@@ -549,10 +550,10 @@ public class ControlFreak extends ExpandableListActivity {
 					uvTable = uvValues.split(" ");
 					for(int i = 0; i < freqTable.length; i += 2)
 					{
-						fqStatsList.add(new FrequencyStats(Integer.parseInt(freqTable[i]) - 1000,
-								                           Integer.parseInt(uvTable[i / 2]), 
-								                           Integer.parseInt(freqTable[i + 1]),
-								                           new CheckBox(getBaseContext())));
+						freq = Integer.parseInt(freqTable[i]) / 1000;
+						uv = Integer.parseInt(uvTable[i / 2]);
+						tis = Integer.parseInt(freqTable[i + 1]);
+						fqStatsList.add(new FrequencyStats(freq, uv, tis, new CheckBox(getBaseContext())));
 					}
 				}
 			}
@@ -594,9 +595,8 @@ public class ControlFreak extends ExpandableListActivity {
 					{
 						freqTable[j] = String.valueOf(tmpFreqVoltTable[i]);
 						voltTable[j] = String.valueOf(tmpFreqVoltTable[i + 1]);
-						stockVoltages.put(String.valueOf(tmpFreqVoltTable[i].
-								subSequence(0, tmpFreqVoltTable[i].length() - 3)),
-								String.valueOf(tmpFreqVoltTable[i + 1]));
+						stockVoltages.put(freqTable[j].substring(0, freqTable[j].length() - 3),
+								voltTable[j]);
 					}
 				}
 			}

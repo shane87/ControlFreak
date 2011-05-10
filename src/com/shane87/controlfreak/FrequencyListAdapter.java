@@ -312,7 +312,7 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 			LayoutInflater infalInflater = (LayoutInflater)context.getSystemService(
 					Context.LAYOUT_INFLATER_SERVICE);
 			//have our inflater inflate the view found in group.xml
-			infalInflater.inflate(R.layout.group, null);
+			convertView = infalInflater.inflate(R.layout.group, null);
 		}
 		
 		//get a reference to the textview found in group.xml, and have it display the basic info
