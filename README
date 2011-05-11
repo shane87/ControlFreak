@@ -16,3 +16,5 @@ along with this program; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 Control Freak is an OC/UV control app for the Samsung Galaxy S Captivate. It is based heavily on, some may even say copied from, xan@xda's Voltage Control. I have re-written the app to add new features, and have updated it for compatibility with Gingerbread. The features exposed by Control Freak have been added to the Talon kernel, written by existz and y3ttr. I can NOT promise compatibility with any other kernels, or phones, and if it does work, but certain features are limited or non-existent, talk to your kernel developer about adding them!
+
+See gpl-2.0.txt for the full GNU General Public License v2.0
