@@ -78,10 +78,10 @@ public class FrequencyStats
 		
 		//if seconds is less than 10, add a zero and seconds to the string
 		if(this.seconds < 10)
-			tisf = tisf.concat("0" + Integer.toString(this.seconds) + ":");
+			tisf = tisf.concat("0" + Integer.toString(this.seconds));
 		//otherwise, just add seconds to the string
 		else
-			tisf = tisf.concat(Integer.toString(this.seconds) + ":");
+			tisf = tisf.concat(Integer.toString(this.seconds));
 		
 		//return our formatted string
 		return tisf;

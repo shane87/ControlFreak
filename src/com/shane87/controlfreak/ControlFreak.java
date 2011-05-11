@@ -73,6 +73,7 @@ public class ControlFreak extends ExpandableListActivity {
 	private String						curGovernor;
 	private String						timeInState;
 	private boolean						statesAvailable = false;
+	private ArrayAdapter<String> 		adapterForFreqSpinner;
 	
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -87,12 +88,11 @@ public class ControlFreak extends ExpandableListActivity {
         //lets setup the arrays for our spinners
         final ArrayAdapter<String> adapterForSchedSpinner = new ArrayAdapter<String>(this,
         														android.R.layout.simple_spinner_item);
-        final ArrayAdapter<String> adapterForFreqSpinner  = new ArrayAdapter<String>(this,
-																android.R.layout.simple_spinner_item);
         final ArrayAdapter<String> adapterForCpuTSpinner  = new	ArrayAdapter<String>(this,
 																android.R.layout.simple_spinner_item);
         final ArrayAdapter<String> adapterForGovSpinner   = new ArrayAdapter<String>(this,
 																android.R.layout.simple_spinner_item);
+        adapterForFreqSpinner   = new ArrayAdapter<String>(this, android.R.layout.simple_spinner_item);
         
         //now lets get pointers to our spinners
         final Spinner schedSpinner 	= (Spinner)findViewById(R.id.schedSpinner);
@@ -297,7 +297,7 @@ public class ControlFreak extends ExpandableListActivity {
         				}
         			}
         			for(int i = 0; i < govSpinner.getCount(); i++)
-        				if(govSpinner.getItemAtPosition(i).toString().matches(curGovernor))
+        				if(curGovernor.contains(govSpinner.getItemAtPosition(i).toString()))
         				{
         					govSpinner.setSelection(i);
         					break;
@@ -506,6 +506,8 @@ public class ControlFreak extends ExpandableListActivity {
 						}
 					}
 					
+					//lets set the correct type for our govSpinner adapter
+					adapterForGovSpinner.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 					//finally, lets get our list of available governors
 					String availGov = ShellInterface.getProcessOutput(C_GOVERNORS_AVAILABLE);
 					curGovernor = ShellInterface.getProcessOutput(C_CUR_GOVERNOR);
@@ -1101,4 +1103,12 @@ public class ControlFreak extends ExpandableListActivity {
 
 		alert.show();
 	}
+    
+    public void updateFreqSpinner(int id)
+    {
+    	if(fqStatsList.get(id).getEnabled())
+    		adapterForFreqSpinner.add(String.valueOf(fqStatsList.get(id).getValue()) + " mHz");
+    	else
+    		adapterForFreqSpinner.remove(String.valueOf(fqStatsList.get(id).getValue()) + " mHz");
+    }
 }

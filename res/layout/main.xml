@@ -12,44 +12,47 @@
 		<TextView android:id="@+id/schedTextView" android:layout_height="wrap_content"
 			android:text="@string/schedulerHeader" android:padding="10dp" android:layout_width="240px" />
 		<Spinner android:id="@+id/schedSpinner" android:layout_below="@+id/schedTextView"
-			android:layout_height="48dp" android:layout_width="192px" />
+			android:layout_height="48dp" android:layout_width="180px" />
 		<Button android:layout_width="60px" android:layout_below="@+id/schedTextView"
-			android:layout_marginLeft="180px" android:text="\?"
+			android:layout_marginLeft="2px" android:text="\?"
 			android:layout_height="46dp" android:id="@+id/schedHelpButton"
-			android:layout_marginTop="2px" />
+			android:layout_marginTop="2px" android:layout_toRightOf="@+id/schedSpinner" />
 		
 		<TextView android:id="@+id/freqTextView" android:layout_height="wrap_content"
 			android:text="@string/freqHeader" android:padding="10dp" 
 			android:layout_width="240px" android:layout_toRightOf="@+id/schedTextView" />
 		<Spinner android:id="@+id/freqSpinner" android:layout_below="@+id/freqTextView"
-			android:layout_height="48dp" android:layout_width="192px" />
+			android:layout_height="48dp" android:layout_width="180px"
+			android:layout_toRightOf="@+id/schedTextView" />
 		<Button android:layout_width="60px" android:layout_below="@+id/freqTextView"
-			android:layout_marginLeft="180px" android:text="\?"
+			android:layout_marginLeft="2px" android:text="\?"
 			android:layout_height="46dp" android:id="@+id/freqHelpButton"
-			android:layout_marginTop="2px" />
+			android:layout_marginTop="2px" android:layout_toRightOf="@+id/freqSpinner" />
 			
 		<TextView android:id="@+id/cpuThreshTextView" android:layout_height="wrap_content"
 			android:text="@string/cpuThreshHeader" android:padding="10dp" 
 			android:layout_width="240px" android:layout_below="@+id/schedSpinner" />
 		<Spinner android:id="@+id/cpuThreshSpinner" android:layout_below="@+id/cpuThreshTextView"
-			android:layout_height="48dp" android:layout_width="192px" />
+			android:layout_height="48dp" android:layout_width="180px" />
 		<Button android:layout_width="60px" android:layout_below="@+id/cpuThreshTextView"
-			android:layout_marginLeft="180px" android:text="\?"
+			android:layout_marginLeft="2px" android:text="\?"
 			android:layout_height="46dp" android:id="@+id/cpuThreshHelpButton"
-			android:layout_marginTop="2px" />
+			android:layout_marginTop="2px" android:layout_toRightOf="@+id/cpuThreshSpinner" />
 			
 		<TextView android:id="@+id/governorTextView" android:layout_height="wrap_content"
 			android:text="@string/governorHeader" android:padding="10dp" 
-			android:layout_width="240px" android:layout_toRightOf="@+id/cpuThreshTextView" />
+			android:layout_width="240px" android:layout_toRightOf="@+id/schedTextView"
+			android:layout_below="@+id/freqSpinner" />
 		<Spinner android:id="@+id/governorSpinner" android:layout_below="@+id/governorTextView"
-			android:layout_height="48dp" android:layout_width="192px" />
+			android:layout_height="48dp" android:layout_width="180px"
+			android:layout_toRightOf="@+id/schedTextView" />
 		<Button android:layout_width="60px" android:layout_below="@+id/governorTextView"
-			android:layout_marginLeft="180px" android:text="\?"
+			android:layout_marginLeft="2px" android:text="\?"
 			android:layout_height="46dp" android:id="@+id/governorHelpButton"
-			android:layout_marginTop="2px" />
+			android:layout_marginTop="2px" android:layout_toRightOf="@+id/governorSpinner" />
 			
 		<ExpandableListView android:id="@android:id/list"
-			android:layout_marginBottom="50px" android:layout_below="@+id/cpuThreshSpinner"
+			android:layout_marginBottom="50px" android:layout_below="@+id/governorSpinner"
 			android:layout_width="fill_parent" android:layout_height="wrap_content" />
 		
 	</RelativeLayout>

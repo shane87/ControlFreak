@@ -159,7 +159,8 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		//Update the checkbox to be checked if this state is enabled, otherwise, leave it unchecked
 		fqStatsList.get(groupPosition).getCheckBox().setChecked(
 				fqStatsList.get(groupPosition).getEnabled());
-		
+		//Change the style of the checkbox
+		fqStatsList.get(groupPosition).getCheckBox().setSingleLine(true);
 		//Build the listener for the checkbox so we can make changes when the user checks/unchecks
 		//the checkbox
 		OnCheckedChangeListener listener = new OnCheckedChangeListener()
@@ -168,6 +169,7 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked)
 			{
 				fqStatsList.get(groupPosition).setEnabled(isChecked);
+				controlFreak.updateFreqSpinner(groupPosition);
 			}
 		};
 		
