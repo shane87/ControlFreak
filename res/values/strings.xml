@@ -34,4 +34,5 @@
 	<string name="cpuThresHelpHeader">CPU Threshold Help</string>
 	<string name="govHelpHeader">Governor Settings</string>
 	<string name="govHelpText">The selected Governor decides when and how to scale your cpu speed up or down. Different governors cause the cpu to behave differently, and therefore have an enormous impact on system stability, speed, and battery consumption.\n\nThe recommended governor is interactive or ondemand, unless you are running FroYo, then ONLY use conservative, as no other governor plays nice with FroYo!\n\nFor more info, see xda.</string>
+	<string name="advGovHelpText">Here you will find advanced tweaks for your selected Governor. If you don\'t know what these values do, LEAVE THEM ALONE!</string>
 </resources>

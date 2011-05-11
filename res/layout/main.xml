@@ -54,6 +54,46 @@
 		<ExpandableListView android:id="@android:id/list"
 			android:layout_marginBottom="50px" android:layout_below="@+id/governorSpinner"
 			android:layout_width="fill_parent" android:layout_height="wrap_content" />
+			
+		<SlidingDrawer android:id="@+id/SlidingDrawer"
+					   android:handle="@+id/sliderlayout"
+					   android:content="@+id/contentLayout"
+					   android:layout_alignParentBottom="true"
+					   android:layout_width="fill_parent"
+					   android:layout_height="wrap_content">
+					   
+			<LinearLayout android:id="@+id/sliderlayout"
+						  android:focusable="true"
+						  android:layout_width="fill_parent"
+						  android:layout_height="wrap_content"
+						  android:gravity="bottom">
+						  
+				<Button android:id="@+id/SliderButton"
+						android:background="@drawable/tray_handle"
+						android:textAppearance="?android:textAppearanceSmall"
+						android:duplicateParentState="true"
+						android:layout_width="fill_parent"
+						android:layout_height="wrap_content"
+						android:text="Advanced Governor Settings"
+						android:singleLine="true" />
+			</LinearLayout>
+			
+			<RelativeLayout android:id="@+id/contentLayout"
+							android:gravity="top|center"
+							android:orientation="vertical"
+							android:padding="5.0dip"
+							android:layout_width="wrap_content"
+							android:layout_height="wrap_content"
+							android:background="#ff888888">
+							
+					<TextView android:id="@+id/test"
+							  android:layout_width="wrap_content"
+							  android:layout_height="wrap_content"
+							  android:text="@string/advGovHelpText"
+							  android:gravity="bottom"
+							  android:layout_alignParentBottom="true"/>
+			</RelativeLayout>
+		</SlidingDrawer>
 		
 	</RelativeLayout>
 </LinearLayout>

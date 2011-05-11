@@ -13,6 +13,7 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ExpandableListActivity;
 import android.app.ProgressDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -29,8 +30,16 @@ import android.widget.AdapterView.OnItemSelectedListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
+import android.widget.CompoundButton.OnCheckedChangeListener;
+import android.widget.EditText;
 import android.widget.ExpandableListAdapter;
+import android.widget.RelativeLayout;
+import android.widget.SlidingDrawer;
+import android.widget.SlidingDrawer.OnDrawerCloseListener;
+import android.widget.SlidingDrawer.OnDrawerOpenListener;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class ControlFreak extends ExpandableListActivity {
@@ -44,6 +53,8 @@ public class ControlFreak extends ExpandableListActivity {
 	//Command to enumerate list of available governors
 	protected static final String C_GOVERNORS_AVAILABLE = "toolbox cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_available_governors";
 	protected static final String C_CUR_GOVERNOR = "toolbox cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor";
+	//Command to check availability of Governor tweaks, based on governor selected
+	protected static final String C_GOV_TWEAKS_AVAIL = "ls /sys/devices/system/cpu/cpufreq";
 	
 	//Kernel Support flags, copied as is from xan's VoltageControl app
 	protected static final int 	  K_FREQUENCY_VOLTAGE_TABLE_CAP = 5;
@@ -159,6 +170,31 @@ public class ControlFreak extends ExpandableListActivity {
 			}
 		});
         
+        //lets setup our Sliding Drawer
+        SlidingDrawer slider;
+        slider = (SlidingDrawer)findViewById(R.id.SlidingDrawer);
+        Button sliderButton;
+        sliderButton = (Button)findViewById(R.id.SliderButton);
+        
+        slider.setOnDrawerOpenListener(new OnDrawerOpenListener()
+        {
+
+			@Override
+			public void onDrawerOpened() 
+			{	
+			}
+        	
+        });
+        
+        slider.setOnDrawerCloseListener(new OnDrawerCloseListener()
+        {
+
+			@Override
+			public void onDrawerClosed() 
+			{
+			}
+        	        	
+        });
         //as a last step before we go to our initialization code, lets get our frequency list adapter
         frequencyAdapter = new FrequencyListAdapter(this, this.getApplicationContext());
         
@@ -173,6 +209,9 @@ public class ControlFreak extends ExpandableListActivity {
         		{
         		case REFRESH:
         		{
+        			
+        			updateDrawer();
+        			
         			OnItemSelectedListener schedSpinnerListener = new Spinner.OnItemSelectedListener()
         			{
 
@@ -232,6 +271,7 @@ public class ControlFreak extends ExpandableListActivity {
 								View arg1, int arg2, long arg3)
 						{
 							curGovernor = arg0.getSelectedItem().toString();
+							updateDrawer();
 							
 						}
 
@@ -1110,5 +1150,64 @@ public class ControlFreak extends ExpandableListActivity {
     		adapterForFreqSpinner.add(String.valueOf(fqStatsList.get(id).getValue()) + " mHz");
     	else
     		adapterForFreqSpinner.remove(String.valueOf(fqStatsList.get(id).getValue()) + " mHz");
+    }
+    
+    private void updateDrawer()
+    {
+    	RelativeLayout rl = (RelativeLayout)findViewById(R.id.contentLayout);
+		Context cont = getApplicationContext();
+		String test = ShellInterface.getProcessOutput(C_GOV_TWEAKS_AVAIL);
+		if(test == "")
+		{
+			findViewById(R.id.SlidingDrawer).setVisibility(View.INVISIBLE);
+		}
+		else
+		{
+			if(curGovernor.contains("interactive"))
+			{
+				findViewById(R.id.SlidingDrawer).setVisibility(View.VISIBLE);
+				CheckBox cb;
+				final EditText et;
+				RelativeLayout.LayoutParams rllp;
+				OnCheckedChangeListener listener;
+				final String minValue;
+				
+				cb = new CheckBox(cont);
+				et = new EditText(cont);
+				rllp = new RelativeLayout.LayoutParams(475, RelativeLayout.LayoutParams.WRAP_CONTENT);
+				minValue = ShellInterface.getProcessOutput("toolbox cat /sys/devices/system/cpu/cpufreq/interactive/min_sample_time");
+				listener = new OnCheckedChangeListener()
+				{
+
+					@Override
+					public void onCheckedChanged(
+							CompoundButton buttonView,
+							boolean isChecked) {
+						et.setEnabled(isChecked);
+						
+					}
+					
+				};
+				
+				cb.setOnCheckedChangeListener(listener);
+				cb.setText("Edit Min Sampling Time?");
+				cb.setChecked(false);
+				cb.setId(1);
+				
+				et.setText(minValue);
+				et.setEnabled(false);
+				
+				rllp.addRule(RelativeLayout.ALIGN_PARENT_TOP);
+				rl.addView(cb, rllp);
+				
+				rllp = new RelativeLayout.LayoutParams(475, RelativeLayout.LayoutParams.WRAP_CONTENT);
+				rllp.addRule(RelativeLayout.BELOW, 1);
+				rl.addView(et, rllp);
+			}
+			else
+			{
+				findViewById(R.id.SlidingDrawer).setVisibility(View.INVISIBLE);
+			}
+		}
     }
 }
