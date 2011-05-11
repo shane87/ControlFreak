@@ -957,7 +957,7 @@ public class ControlFreak extends ExpandableListActivity {
 
 					@Override
 					public void onClick(DialogInterface dialog, int id) {
-						String url = "http://forum.xda-developers.com/showthread.php?t=1030994";
+						String url = "http://forum.xda-developers.com/showthread.php?t=1072403";
 						Intent i = new Intent(Intent.ACTION_VIEW);
 						i.setData(Uri.parse(url));
 						startActivity(i);
@@ -1006,7 +1006,7 @@ public class ControlFreak extends ExpandableListActivity {
 
 					@Override
 					public void onClick(DialogInterface dialog, int id) {
-						String url = "http://forum.xda-developers.com/showthread.php?t=1030994";
+						String url = "http://forum.xda-developers.com/showthread.php?t=1072403";
 						Intent i = new Intent(Intent.ACTION_VIEW);
 						i.setData(Uri.parse(url));
 						startActivity(i);
@@ -1090,7 +1090,7 @@ public class ControlFreak extends ExpandableListActivity {
 
 					@Override
 					public void onClick(DialogInterface dialog, int id) {
-						String url = "http://forum.xda-developers.com/showthread.php?t=930679";
+						String url = "http://forum.xda-developers.com/showthread.php?t=1050206";
 						Intent i = new Intent(Intent.ACTION_VIEW);
 						i.setData(Uri.parse(url));
 						startActivity(i);
