@@ -287,7 +287,7 @@ public class ControlFreak extends ExpandableListActivity {
         				View arg1, int arg2, long arg3)
         		{
         			curGovernor = arg0.getSelectedItem().toString();
-        			updateDrawer();
+        			//updateDrawer();
 
         		}
 
@@ -799,10 +799,18 @@ public class ControlFreak extends ExpandableListActivity {
     		adapterForFreqSpinner.remove(String.valueOf(fqStatsList.get(id).getValue()) + " mHz");
     }
     
+    //working on adding some governor specific tweaks to a sliding drawer
+    //not finished yet, and I have been more focused on getting the base app 
+    //to run properly, so I am going to just have the sliding drawer hide itself
+    //for now, until I get the base app straightened out. Then I will bring the sliding
+    //drawer back, and start working on this again.
     private void updateDrawer()
     {
     	RelativeLayout rl = (RelativeLayout)findViewById(R.id.contentLayout);
 		Context cont = getApplicationContext();
+		
+		findViewById(R.id.SlidingDrawer).setVisibility(View.INVISIBLE);
+		/*
 		String test = ShellInterface.getProcessOutput(C_GOV_TWEAKS_AVAIL);
 		if(test == "")
 		{
@@ -855,7 +863,7 @@ public class ControlFreak extends ExpandableListActivity {
 			{
 				findViewById(R.id.SlidingDrawer).setVisibility(View.INVISIBLE);
 			}
-		}
+		}*/
     }
     
     private class initializer extends AsyncTask<ArrayAdapter<String>, Void, Integer>
