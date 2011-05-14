@@ -18,6 +18,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -198,536 +199,182 @@ public class ControlFreak extends ExpandableListActivity {
         //as a last step before we go to our initialization code, lets get our frequency list adapter
         frequencyAdapter = new FrequencyListAdapter(this, this.getApplicationContext());
         
-        //now lets setup our refresh handler, so that when we finish initialization we can finish our
-        //ui setup
-        final Handler uiRefreshHandler = new Handler()
-        {
-        	@Override
-        	public void handleMessage(Message msg)
-        	{
-        		switch(msg.what)
-        		{
-        		case REFRESH:
-        		{
-        			
-        			updateDrawer();
-        			
-        			OnItemSelectedListener schedSpinnerListener = new Spinner.OnItemSelectedListener()
-        			{
-
-						@Override
-						public void onItemSelected(AdapterView<?> arg0,
-								View arg1, int arg2, long arg3)
-						{
-							activeSched = (int)arg0.getSelectedItemId();
-							
-						}
-
-						//not used, but we have to implement it
-						@Override
-						public void onNothingSelected(AdapterView<?> arg0){}
-        				
-        			};
-        			
-        			OnItemSelectedListener freqSpinnerListener = new Spinner.OnItemSelectedListener()
-        			{
-
-						@Override
-						public void onItemSelected(AdapterView<?> arg0,
-								View arg1, int arg2, long arg3)
-						{
-							maxFrequency = arg0.getSelectedItem().toString();
-							
-						}
-
-						//not used, but we have to implement it
-						@Override
-						public void onNothingSelected(AdapterView<?> arg0){}
-        				
-        			};
-        			
-        			OnItemSelectedListener cpuTSpinnerListener = new Spinner.OnItemSelectedListener()
-        			{
-
-						@Override
-						public void onItemSelected(AdapterView<?> arg0,
-								View arg1, int arg2, long arg3)
-						{
-							cpuThres = (int)arg0.getSelectedItemId();
-							
-						}
-
-						//not used, but we have to implement it
-						@Override
-						public void onNothingSelected(AdapterView<?> arg0) {}
-        				
-        			};
-        			
-        			OnItemSelectedListener govSpinnerListener = new Spinner.OnItemSelectedListener()
-        			{
-
-						@Override
-						public void onItemSelected(AdapterView<?> arg0,
-								View arg1, int arg2, long arg3)
-						{
-							curGovernor = arg0.getSelectedItem().toString();
-							updateDrawer();
-							
-						}
-
-						@Override
-						public void onNothingSelected(AdapterView<?> arg0) {}
-        				
-        			};
-        			
-        			//lets link our listeners to their Spinners, and the Array adapters to the Spinners
-        			//as well
-        			//first, lets link the listeners
-        			freqSpinner.setOnItemSelectedListener(freqSpinnerListener);
-        			schedSpinner.setOnItemSelectedListener(schedSpinnerListener);
-        			cpuTSpinner.setOnItemSelectedListener(cpuTSpinnerListener);
-        			govSpinner.setOnItemSelectedListener(govSpinnerListener);
-        			
-        			//now lets link the array adapters to the correct spinners
-        			freqSpinner.setAdapter(adapterForFreqSpinner);
-        			schedSpinner.setAdapter(adapterForSchedSpinner);
-        			cpuTSpinner.setAdapter(adapterForCpuTSpinner);
-        			govSpinner.setAdapter(adapterForGovSpinner);
-        			
-        			//lets set the initial selections of our spinners appropriately
-        			//first the scheduler spinner
-        			schedSpinner.setSelection(activeSched);
-        			
-        			//next the cpuThresh spinner
-        			//as long as cpuThres is non-negative, the kernel supports cpuThresh settings
-        			//so we will set the spinner to the correct setting
-        			if(cpuThres >= 0)
-        				cpuTSpinner.setSelection(cpuThres);
-        			
-        			//if cpuThres is negative, either the kernel does not support cpuThresh settings
-        			//or we weren't able to get them, so we will hide the spinner, button, and text
-        			else
-        			{
-        				findViewById(R.id.cpuThreshHelpButton).setVisibility(View.GONE);
-        				findViewById(R.id.cpuThreshSpinner).setVisibility(View.GONE);
-        				findViewById(R.id.cpuThreshTextView).setVisibility(View.GONE);
-        			}
-        			
-        			//next, the governor spinner
-        			govSpinner.setSelection(adapterForGovSpinner.getPosition(curGovernor));
-        			
-        			//before we can set the freqSpinner, lets setup our expandable list adapter
-        			((FrequencyListAdapter) frequencyAdapter).setFrequencies(fqStatsList);
-        			setListAdapter(frequencyAdapter);
-        			
-        			//now lets set the freqSpinner, first we call for the current max frequency,
-        			//then we will loop through the available frequencies to pick the right one
-        			String maxCpu = ShellInterface.getProcessOutput(C_SCALING_MAX_FREQ);
-        			//dont forget to take 4 digits from the end, since we are
-        			//simply getting the contents of scaling_max_frequency file, which has the
-        			//currently set max frequency in khz
-        			maxCpu = maxCpu.substring(0, maxCpu.length() - 4);
-        			
-        			for(int i = 0; i < freqSpinner.getCount(); i++)
-        			{
-        				if(freqSpinner.getItemAtPosition(i).toString().matches(maxCpu + " Mhz"))
-        				{
-        					freqSpinner.setSelection(i);
-        					break;
-        				}
-        			}
-        			for(int i = 0; i < govSpinner.getCount(); i++)
-        				if(curGovernor.contains(govSpinner.getItemAtPosition(i).toString()))
-        				{
-        					govSpinner.setSelection(i);
-        					break;
-        				}
-        			
-        			break;
-        		}
-        		case NOROOT:
-        		{
-        			showNoRootAlert();
-        			break;
-        		}
-        		case WRONGKERNEL:
-        		{
-        			showWrongKernelAlert();
-        			break;
-        		}
-        		}
-        	}
-        };
-        
-        //Ok, now that the refresh handler is setup, lets get down to the business of initialization
-        //Lets show a spinner dialog to let the user know what's going on
+        //lets show our spinner dialog, to let the user know we are working
+        //NOTE: This dialog never shows up after switching to AsyncTask
+        //Needs to be removed?
         final ProgressDialog spinnerDiag = ProgressDialog.show(this,
         		"Initialization", 
         		"Querrying System Settings", true);
         
-        //now lets start a background thread to do the actual initialization
-        new Thread(new Runnable()
+        //Lets get a holder for our async task class, and tell it to start working
+        @SuppressWarnings("unchecked")
+		AsyncTask<ArrayAdapter<String>, Void, Integer> init = new initializer().execute(adapterForSchedSpinner, adapterForFreqSpinner, adapterForCpuTSpinner, adapterForGovSpinner);
+        
+        //lets create a variable for our asyncTask return value
+        int ret = -1;
+        //now we will get the return code once our background task completes
+        //we put it in a try/catch block since the get() function can throw exceptions
+        try
         {
+        	ret = init.get();
+        }catch(Exception Igonored){}
+        
+        //now that we have our return value, we will switch on it, to either update the ui, or to
+        //let the user know we had errors with no su or wrong kernel
+        switch(ret)
+        {
+        case REFRESH:
+        {
+       
+        	updateDrawer();
+       
+        	OnItemSelectedListener schedSpinnerListener = new Spinner.OnItemSelectedListener()
+        	{
 
-			@Override
-			public void run() {
-				//first, lets set up a string to test the availability of su
-				String tester = null;
-				
-				//if su is available, we will put the contents of uv_mv_table in the tester string
-				//otherwise, tester will stay as null
-				if(ShellInterface.isSuAvailable())
-					tester = ShellInterface.getProcessOutput(C_UV_MV_TABLE);
-				
-				//if tester is not null, we have su, so lets continue
-				if(tester != null)
-				{
-					//if tester is not null, but is empty, this kernel does not support
-					//uv/oc control in the right way, so lets send the WRONGKERNEL message
-					//to let the user know
-					if(tester == "")
-						uiRefreshHandler.sendEmptyMessage(WRONGKERNEL);
-					//otherwise, we are ready to begin!
-					else
-					{
-						//we start by calling getFreqVoltTable, which will pull all of our frequencies
-						//and their voltage settings and store them in our stockVoltages global
-						getFreqVoltTable();
-						
-						//now lets get our frequency list and tis info from getTimeInState()
-						String[] freqTable = getTimeInState();
-						
-						//then we can pass our tester string and the info returned above to store our
-						//frequencies and voltages in or fqStatsList
-						getFreqTable(tester, freqTable);
-						
-						//we need to check our states enabled table, to find out which states are
-						//enabled. this will let us set the initial state of the states checkboxes
-						//appropriately
-						getStates();
-						
-						try
-						{
-							//lets make our scheduler script to make setting scheduler changes easier
-							OutputStreamWriter out = new OutputStreamWriter(openFileOutput("sched.sh", 0));
-							out.write("#!/system/bin/sh\n# Set \"$1\" scheduler for stl, bml and mmc\nfor i in `ls /sys/block/stl*` /sys/block/bml* /sys/block/mmcblk*\ndo\necho \"$1\" > $i/queue/scheduler\ndone");
-							out.close();
-						}catch(java.io.IOException e){}
-						
-						//and don't forget to chmod it, or it won't execute!!
-						ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/" +
-												  "files/sched.sh");
-						
-						//now lets start setting up our spinner adapters, starting with freq
-						//first, we let android know what kind of spinner we will be attaching this to
-						adapterForFreqSpinner.setDropDownViewResource(
-								android.R.layout.simple_spinner_dropdown_item);
-						
-						//now we loop through all of our frequencies, and add the enabled states to the
-						//spinner
-						for(int i = 0; i < fqStatsList.size(); i++)
-							if(fqStatsList.get(i).getEnabled())
-								adapterForFreqSpinner.add(fqStatsList.get(i).getValue() + " mHz");
-						
-						//while we are on the subject of frequencies, lets go ahead and get our
-						//max frequency setting
-						maxFreq = ShellInterface.getProcessOutput(C_SCALING_MAX_FREQ);
-						//if we get a null string, we have root problems and wouldn't
-						//ever make it this far, but it is always best to check for the
-						//worst case scenario
-						if(maxFreq == null)
-							maxFreq = new String("");
-						if(maxFreq.equals(""))
-							maxFreq.concat("0 0");
-						
-						//trim the last four digits, since the max freq file stores
-						//the frequency in kHz instead of mHz
-						maxFreq = maxFreq.substring(0, maxFreq.length() - 4);
-						
-						//now, the same thing for schedulers, first set the proper spinner type
-						adapterForSchedSpinner.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-						//now lets get what spinners we have available, and the currently
-						//enabled one as well
-						String schedTableTmp = ShellInterface.getProcessOutput("cat /sys/block" +
-								                                            "/mmcblk0/queue/scheduler");
-						
-						//split individual entries into an array
-						schedTable = schedTableTmp.split(" ");
-						//then loop through the array
-						for(int i = 0; i < schedTable.length; i++)
-						{
-							//if the entry contains "[", it is our active scheduler, so lets note that
-							if(schedTable[i].contains("["))
-								activeSched = i;
-							//then add all of the schedulers to the adapter
-							adapterForSchedSpinner.add(schedTable[i]);
-						}
-						
-						//and now for the cpuThresh settings
-						//again, let android know what kind of spinner item it is
-						adapterForCpuTSpinner.setDropDownViewResource(
-								android.R.layout.simple_spinner_dropdown_item);
-						//then add the three supported settings
-						adapterForCpuTSpinner.add("Stock");
-						adapterForCpuTSpinner.add("Performance");
-						adapterForCpuTSpinner.add("Battery Saver");
-						
-						//now lets find out if we support cpuThres, and if so, what one we have set
-						String cpuThresTmp = ShellInterface.getProcessOutput(
-								"cat /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
-						//if we get an empty string, we either dont have cpuThres available, or we
-						//cant get the settings, so lets set cpuThres to a negative number
-						if(cpuThresTmp.equals(""))
-							cpuThres = -1;
-						else
-						{
-							//otherwise, lets go on and split the cpuThres values out into an array
-							String[] cpuThresVals = cpuThresTmp.split(" ");
-							//lets assume a default value of "Stock"
-							cpuThres = 0;
-							//if the first value is 30, we have performance settings, so lets note that
-							if(cpuThresVals[0].equals("30"))
-								cpuThres = 1;
-							//else if, the first and third settings are 55, we have battery
-							//saver settings, so lets note that
-							else if(cpuThresVals[0].equals("55") && cpuThresVals[2].equals("55"))
-								cpuThres = 2;
-							
-							try
-							{
-								//since we know we have cpuThres available, lets make our cpuThres apply
-								//scripts, starting with performance settings
-								OutputStreamWriter out = new OutputStreamWriter(openFileOutput(
-										"cpuT_performance.sh", 0));
-								out.write("#! /system/bin/sh\n" +
-										  "#Set Performace values to cpu_thres_table\n" +
-										  "echo 30 70 30 70 30 70 30 70 30 70 30 70 " +
-										  "30 70 30 70 30 70 30 70 30 70 30 70 30 70" +
-										  " > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
-								out.close();
-							}
-							catch(java.io.IOException e)
-							{
-							}
-							//and lets make it executable
-							ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/cpuT_performance.sh");
-							try
-							{
-								//now for the battery settings
-								OutputStreamWriter out = new OutputStreamWriter(openFileOutput(
-										"cpuT_battery.sh", 0));
-								out.write("#! /system/bin/sh\n" +
-										  "#Set Battery Saver values to cpu_thres_table\n" +
-										  "echo 55 80 55 90 55 90 55 90 55 90 55 90 " +
-										  "60 80 60 80 60 80 60 80 60 80 60 80 60 80" +
-										  " > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
-								out.close();
-							}
-							catch(java.io.IOException e)
-							{
-							}
-							ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/cpuT_battery.sh");
-							try
-							{
-								//and finally the stock settings
-								OutputStreamWriter out = new OutputStreamWriter(openFileOutput(
-										"cpuT_stock.sh", 0));
-								out.write("#! /system/bin/sh\n" +
-										  "#Set Stock values to cpu_thres_table\n" +
-										  "echo 55 80 50 90 50 90 50 90 40 90 40 90 " +
-										  "30 80 20 70 20 70 20 70 20 70 20 70 20 70" +
-										  " > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
-								out.close();
-							}
-							catch(java.io.IOException e)
-							{
-							}
-							ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/cpuT_stock.sh");
-						}
-					}
-					
-					//lets set the correct type for our govSpinner adapter
-					adapterForGovSpinner.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-					//finally, lets get our list of available governors
-					String availGov = ShellInterface.getProcessOutput(C_GOVERNORS_AVAILABLE);
-					curGovernor = ShellInterface.getProcessOutput(C_CUR_GOVERNOR);
-					String[] availGovAr = availGov.split(" ");
-					
-					for(int i = 0; i < availGovAr.length; i++)
-						adapterForGovSpinner.add(availGovAr[i]);
-					
-					//now that we have our info gathered, lets let the ui refresh
-					uiRefreshHandler.sendEmptyMessage(REFRESH);
-				}
-				//if tester IS null, we do not have su, so lets send the NOROOT message to the handler
-				//so it can notify the user
-				else
-					uiRefreshHandler.sendEmptyMessage(NOROOT);
-				
-				//now we can dismiss our spinner dialog, then return
-				spinnerDiag.dismiss();
-				return;
-			}
-			
-			//ok, this function is designed to take the tester string, which has our uv values in it,
-			//and our freqTable array, which has our tis info and frequency info, and use these
-			//values to set up our fqStatsList arraylist
-			private void getFreqTable(String tester, String[] freqTable)
-			{
-				//a holder for our uv values, so we can split them down into individual values
-				String[] uvTable;
-				//lets store our tester string in or uvValues global variable, so we know what values
-				//have been modified by the user when it comes time to apply/save the settings
-				uvValues = tester;
-				//some holders for the integer values of our strings
-				//I added these to help track down why it was getting the wrong values for
-				//frequency. as it turns out, SUBTRACTING 1000 does NOT give the same results
-				//as I intended, since I intended to DIVIDE by 1000, lol
-				int freq, uv, tis;
-				
-				//if we don't have any uvValues. This should never happen, since
-				//uvValues is loaded from tester, and if tester is null, we will never reach
-				//this code. but we put it here just in case, to avoid null pointer exceptions
-				if(uvValues == null)
-					//if uvValues is new, lets make uvValues equal "" so we can trigger the next if
-					uvValues = new String("");
-				
-				//again, this shouldn't happen, since a tester value of "" will cause an incompatible
-				//kernel alert, and the above code, which would also trigger this, shouldnt happen either
-				//but just in case:
-				if(uvValues.equals(""))
-				{
-					//if we have no uv values, we will instantiate our fqStatsList array with 
-					//FrequencyStats members with the following settings:
-					//value of the frequency for each state
-					//0 for uv value
-					//value of the tis for each state
-					for(int i = 0; i < freqTable.length; i += 2)
-					{
-						fqStatsList.add(new FrequencyStats(Integer.parseInt(freqTable[i]) / 1000,
-								                           0, 
-								                           Integer.parseInt(freqTable[i + 1]),
-								                           new CheckBox(getBaseContext())));
-					}
-				}
-				//else, we have uvValues, so lets get the fqStatsList setup right
-				else
-				{
-					//first, split the uvValues into individual strings, one for each freq
-					uvTable = uvValues.split(" ");
-					//now we loop through, pulling freq and tis from freqTable, and uv from uvTable
-					//i is incremented by 2 for each step, since freqTable[0] is the first freq and
-					//freqTable[1] is the tis for freqTable[0], freqTable[2] is the second freq, etc etc
-					//by using i to reference the freq, i + 1 to reference the tis, and i / 2 to access
-					//the the uv values, everything is pulled from the right place of each array
-					for(int i = 0; i < freqTable.length; i += 2)
-					{
-						freq = Integer.parseInt(freqTable[i]) / 1000;
-						uv = Integer.parseInt(uvTable[i / 2]);
-						tis = Integer.parseInt(freqTable[i + 1]);
-						//now that we have the int values of our settings, we can setup our
-						//fqStatsList entry
-						fqStatsList.add(new FrequencyStats(freq, uv, tis, new CheckBox(getBaseContext())));
-					}
-				}
-			}
-			
-			//this is used to get our time in state info, and our list of frequencies
-			//the value returned by this is used by getFreqTable to setup our fqStatsList
-			private String[] getTimeInState()
-			{
-				//ok, we will pull our tis string from the correct file, and store it in
-				//our global timeInState variable
-				timeInState = ShellInterface.getProcessOutput(C_TIME_IN_STATE);
-				
-				//this should never happen, since the return from getProcessOutput() should only
-				//be null when you have no root access, and that would be detected long before we get
-				//here. but the only thing you can always be sure of on these phones is that they
-				//will do as they please, so lets just be careful
-				if(timeInState == null)
-					timeInState = "";
-				if(timeInState == "")
-					timeInState.concat("0 0");
-				
-				//all that is left to do is spilt our timeInState string into an array, and return it
-				String[] freqTable = timeInState.split(" ");
-				return freqTable;
-			}
-			
-			//this function sets up our stockVoltages map, so we can refer to their stock value
-			//note that the "stock" value is actually their value when the app is launched, unless
-			//the kernel does not support uv, in which case the app should let them know
-			private void getFreqVoltTable()
-			{
-				//get our freq_volt_table, which has the frequencies and voltages listed
-				String freqVoltTable = ShellInterface.getProcessOutput(C_FREQUENCY_VOLTAGE_TABLE);
-				
-				//if we have no freq_volt_table, why are we still running?
-				//but it is best to be on the safe side
-				if(freqVoltTable == "")
-				{
-					stockVoltages.put("100", "950");
-					stockVoltages.put("200", "950");
-					stockVoltages.put("400", "1050");
-					stockVoltages.put("800", "1200");
-					stockVoltages.put("1000", "1275");
-					stockVoltages.put("1120", "1300");
-					stockVoltages.put("1200", "1300");
-				}
-				//otherwise, we have a freq_volt_table, so we will populate our stock voltages
-				//map with the values we just got
-				else
-				{
-					//first, lets split one string into an array, with one entry per index
-					String[] tmpFreqVoltTable = freqVoltTable.split(" ");
-					//temp holders to split the frequencies from the voltages, since they
-					//are all mixed together in our first array
-					String[] freqTable = new String[20];
-					String[] voltTable = new String[20];
-					
-					//now we loop through our freqVoltTable, and store the frequencies and 
-					//voltages as indicated above, then remove the last three zeros from the frequency
-					//and store the values in our map
-					for(int i = 0, j = 0; i < tmpFreqVoltTable.length; i += 3, j++)
-					{
-						freqTable[j] = String.valueOf(tmpFreqVoltTable[i]);
-						voltTable[j] = String.valueOf(tmpFreqVoltTable[i + 1]);
-						stockVoltages.put(freqTable[j].substring(0, freqTable[j].length() - 3),
-								voltTable[j]);
-					}
-				}
-			}
-			
-			//ok, in this function, we will get our states enabled info, so that we can
-			//set our states to the correct enabled/disabled setting
-			private boolean getStates()
-			{
-				//get the string from the states_enabled_table file
-				String statesEnabledTemp = ShellInterface.getProcessOutput(C_STATES_ENABLED);
-				
-				try
-				{
-					//we put all of this in a try catch block, instead of checking for null values
-					//split the string into an array, and if the string is null, we will get an exception
-					//to be caught, then ignored, by the catch block
-					String[] statesEnable = statesEnabledTemp.split(" ");
-					//now loop through and enable the enabled states, and disable the disabled states
-					for(int i = 0; i < fqStatsList.size(); i++)
-					{
-						if(statesEnable[i].equals("1"))
-							fqStatsList.get(i).setEnabled(true);
-						else
-							fqStatsList.get(i).setEnabled(false);
-					}
-				}catch(Exception ignored){return false;}
-				
-				//just before we return, we will set statesAvailable to true, to keep from
-				//having to call this again
-				statesAvailable = true;
-				return true;
-			}
-        	
-        }).start();
+        			@Override
+        			public void onItemSelected(AdapterView<?> arg0,
+        					View arg1, int arg2, long arg3)
+        			{
+        				activeSched = (int)arg0.getSelectedItemId();
+
+        			}
+
+        			//not used, but we have to implement it
+        			@Override
+        			public void onNothingSelected(AdapterView<?> arg0){}
+       
+        	};
+       
+        	OnItemSelectedListener freqSpinnerListener = new Spinner.OnItemSelectedListener()
+        	{
+
+        		@Override
+        		public void onItemSelected(AdapterView<?> arg0,
+        				View arg1, int arg2, long arg3)
+        		{
+        			maxFrequency = arg0.getSelectedItem().toString();
+
+        		}
+
+        		//not used, but we have to implement it
+        		@Override
+        		public void onNothingSelected(AdapterView<?> arg0){}
+       
+        	};
+       
+        	OnItemSelectedListener cpuTSpinnerListener = new Spinner.OnItemSelectedListener()
+        	{
+
+        		@Override
+        		public void onItemSelected(AdapterView<?> arg0,
+        				View arg1, int arg2, long arg3)
+        		{
+        			cpuThres = (int)arg0.getSelectedItemId();
+
+        		}
+
+        		//not used, but we have to implement it
+        		@Override
+        		public void onNothingSelected(AdapterView<?> arg0) {}
+       
+        	};
+       
+        	OnItemSelectedListener govSpinnerListener = new Spinner.OnItemSelectedListener()
+        	{
+
+        		@Override
+        		public void onItemSelected(AdapterView<?> arg0,
+        				View arg1, int arg2, long arg3)
+        		{
+        			curGovernor = arg0.getSelectedItem().toString();
+        			updateDrawer();
+
+        		}
+
+        		@Override
+        		public void onNothingSelected(AdapterView<?> arg0) {}
+       
+        	};
+       
+        	//lets link our listeners to their Spinners, and the Array adapters to the Spinners
+        	//as well
+        	//first, lets link the listeners
+        	freqSpinner.setOnItemSelectedListener(freqSpinnerListener);
+        	schedSpinner.setOnItemSelectedListener(schedSpinnerListener);
+        	cpuTSpinner.setOnItemSelectedListener(cpuTSpinnerListener);
+        	govSpinner.setOnItemSelectedListener(govSpinnerListener);
+       
+        	//now lets link the array adapters to the correct spinners
+        	freqSpinner.setAdapter(adapterForFreqSpinner);
+        	schedSpinner.setAdapter(adapterForSchedSpinner);
+        	cpuTSpinner.setAdapter(adapterForCpuTSpinner);
+        	govSpinner.setAdapter(adapterForGovSpinner);
+       
+        	//lets set the initial selections of our spinners appropriately
+        	//first the scheduler spinner
+        	schedSpinner.setSelection(activeSched);
+       
+        	//next the cpuThresh spinner
+        	//as long as cpuThres is non-negative, the kernel supports cpuThresh settings
+        	//so we will set the spinner to the correct setting
+        	if(cpuThres >= 0)
+        		cpuTSpinner.setSelection(cpuThres);
+       
+        	//if cpuThres is negative, either the kernel does not support cpuThresh settings
+        	//or we weren't able to get them, so we will hide the spinner, button, and text
+        	else
+        	{
+        		findViewById(R.id.cpuThreshHelpButton).setVisibility(View.GONE);
+        		findViewById(R.id.cpuThreshSpinner).setVisibility(View.GONE);
+        		findViewById(R.id.cpuThreshTextView).setVisibility(View.GONE);
+        	}
+       
+        	//next, the governor spinner
+        	govSpinner.setSelection(adapterForGovSpinner.getPosition(curGovernor));
+       
+        	//before we can set the freqSpinner, lets setup our expandable list adapter
+        	((FrequencyListAdapter) frequencyAdapter).setFrequencies(fqStatsList);
+        	setListAdapter(frequencyAdapter);
+       
+        	//now lets set the freqSpinner, first we call for the current max frequency,
+        	//then we will loop through the available frequencies to pick the right one
+        	String maxCpu = ShellInterface.getProcessOutput(C_SCALING_MAX_FREQ);
+        	//dont forget to take 4 digits from the end, since we are
+        	//simply getting the contents of scaling_max_frequency file, which has the
+        	//currently set max frequency in khz
+        	maxCpu = maxCpu.substring(0, maxCpu.length() - 4);
+       
+        	for(int i = 0; i < freqSpinner.getCount(); i++)
+        	{
+        		if(freqSpinner.getItemAtPosition(i).toString().matches(maxCpu + " Mhz"))
+        		{
+        			freqSpinner.setSelection(i);
+        			break;
+        		}
+        	}
+        	for(int i = 0; i < govSpinner.getCount(); i++)
+        		if(curGovernor.contains(govSpinner.getItemAtPosition(i).toString()))
+        		{
+        			govSpinner.setSelection(i);
+        			break;
+        		}
+       
+        	break;
+        }
+        case NOROOT:
+        {
+        showNoRootAlert();
+        break;
+        }
+        case WRONGKERNEL:
+        {
+        showWrongKernelAlert();
+        break;
+        }
+        }
+        
+        spinnerDiag.dismiss();
+      
     }
     
     //lets setup our menu when the user presses the menu button
@@ -1209,5 +856,377 @@ public class ControlFreak extends ExpandableListActivity {
 				findViewById(R.id.SlidingDrawer).setVisibility(View.INVISIBLE);
 			}
 		}
+    }
+    
+    private class initializer extends AsyncTask<ArrayAdapter<String>, Void, Integer>
+    {    	
+    	public ArrayAdapter<String> adapterForSchedSpinner;
+    	public ArrayAdapter<String> adapterForFreqSpinner;
+    	public ArrayAdapter<String> adapterForCpuTSpinner;
+    	public ArrayAdapter<String> adapterForGovSpinner;
+    	
+    	protected Integer doInBackground(ArrayAdapter<String>... arrays)
+    	{
+    		Integer retVal = 0;
+    		
+    		adapterForSchedSpinner = arrays[0];
+    		adapterForFreqSpinner = arrays[1];
+    		adapterForCpuTSpinner = arrays[2];
+    		adapterForGovSpinner = arrays[3];
+    		
+    		//first, lets set up a string to test the availability of su
+			String tester = null;
+			
+			//if su is available, we will put the contents of uv_mv_table in the tester string
+			//otherwise, tester will stay as null
+			if(ShellInterface.isSuAvailable())
+				tester = ShellInterface.getProcessOutput(C_UV_MV_TABLE);
+			
+			//if tester is not null, we have su, so lets continue
+			if(tester != null)
+			{
+				//if tester is not null, but is empty, this kernel does not support
+				//uv/oc control in the right way, so lets send the WRONGKERNEL message
+				//to let the user know
+				if(tester == "")
+					retVal = WRONGKERNEL;
+				//otherwise, we are ready to begin!
+				else
+				{
+					//we start by calling getFreqVoltTable, which will pull all of our frequencies
+					//and their voltage settings and store them in our stockVoltages global
+					getFreqVoltTable();
+					
+					//now lets get our frequency list and tis info from getTimeInState()
+					String[] freqTable = getTimeInState();
+					
+					//then we can pass our tester string and the info returned above to store our
+					//frequencies and voltages in or fqStatsList
+					getFreqTable(tester, freqTable);
+					
+					//we need to check our states enabled table, to find out which states are
+					//enabled. this will let us set the initial state of the states checkboxes
+					//appropriately
+					getStates();
+					
+					try
+					{
+						//lets make our scheduler script to make setting scheduler changes easier
+						OutputStreamWriter out = new OutputStreamWriter(openFileOutput("sched.sh", 0));
+						out.write("#!/system/bin/sh\n# Set \"$1\" scheduler for stl, bml and mmc\nfor i in `ls /sys/block/stl*` /sys/block/bml* /sys/block/mmcblk*\ndo\necho \"$1\" > $i/queue/scheduler\ndone");
+						out.close();
+					}catch(java.io.IOException e){}
+					
+					//and don't forget to chmod it, or it won't execute!!
+					ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/" +
+											  "files/sched.sh");
+					
+					//now lets start setting up our spinner adapters, starting with freq
+					//first, we let android know what kind of spinner we will be attaching this to
+					adapterForFreqSpinner.setDropDownViewResource(
+							android.R.layout.simple_spinner_dropdown_item);
+					
+					//now we loop through all of our frequencies, and add the enabled states to the
+					//spinner
+					for(int i = 0; i < fqStatsList.size(); i++)
+						if(fqStatsList.get(i).getEnabled())
+							adapterForFreqSpinner.add(fqStatsList.get(i).getValue() + " mHz");
+					
+					//while we are on the subject of frequencies, lets go ahead and get our
+					//max frequency setting
+					maxFreq = ShellInterface.getProcessOutput(C_SCALING_MAX_FREQ);
+					//if we get a null string, we have root problems and wouldn't
+					//ever make it this far, but it is always best to check for the
+					//worst case scenario
+					if(maxFreq == null)
+						maxFreq = new String("");
+					if(maxFreq.equals(""))
+						maxFreq.concat("0 0");
+					
+					//trim the last four digits, since the max freq file stores
+					//the frequency in kHz instead of mHz
+					maxFreq = maxFreq.substring(0, maxFreq.length() - 4);
+					
+					//now, the same thing for schedulers, first set the proper spinner type
+					adapterForSchedSpinner.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+					//now lets get what spinners we have available, and the currently
+					//enabled one as well
+					String schedTableTmp = ShellInterface.getProcessOutput("cat /sys/block" +
+							                                            "/mmcblk0/queue/scheduler");
+					
+					//split individual entries into an array
+					schedTable = schedTableTmp.split(" ");
+					//then loop through the array
+					for(int i = 0; i < schedTable.length; i++)
+					{
+						//if the entry contains "[", it is our active scheduler, so lets note that
+						if(schedTable[i].contains("["))
+							activeSched = i;
+						//then add all of the schedulers to the adapter
+						adapterForSchedSpinner.add(schedTable[i]);
+					}
+					
+					//and now for the cpuThresh settings
+					//again, let android know what kind of spinner item it is
+					adapterForCpuTSpinner.setDropDownViewResource(
+							android.R.layout.simple_spinner_dropdown_item);
+					//then add the three supported settings
+					adapterForCpuTSpinner.add("Stock");
+					adapterForCpuTSpinner.add("Performance");
+					adapterForCpuTSpinner.add("Battery Saver");
+					
+					//now lets find out if we support cpuThres, and if so, what one we have set
+					String cpuThresTmp = ShellInterface.getProcessOutput(
+							"cat /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
+					//if we get an empty string, we either dont have cpuThres available, or we
+					//cant get the settings, so lets set cpuThres to a negative number
+					if(cpuThresTmp.equals(""))
+						cpuThres = -1;
+					else
+					{
+						//otherwise, lets go on and split the cpuThres values out into an array
+						String[] cpuThresVals = cpuThresTmp.split(" ");
+						//lets assume a default value of "Stock"
+						cpuThres = 0;
+						//if the first value is 30, we have performance settings, so lets note that
+						if(cpuThresVals[0].equals("30"))
+							cpuThres = 1;
+						//else if, the first and third settings are 55, we have battery
+						//saver settings, so lets note that
+						else if(cpuThresVals[0].equals("55") && cpuThresVals[2].equals("55"))
+							cpuThres = 2;
+						
+						try
+						{
+							//since we know we have cpuThres available, lets make our cpuThres apply
+							//scripts, starting with performance settings
+							OutputStreamWriter out = new OutputStreamWriter(openFileOutput(
+									"cpuT_performance.sh", 0));
+							out.write("#! /system/bin/sh\n" +
+									  "#Set Performace values to cpu_thres_table\n" +
+									  "echo 30 70 30 70 30 70 30 70 30 70 30 70 " +
+									  "30 70 30 70 30 70 30 70 30 70 30 70 30 70" +
+									  " > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
+							out.close();
+						}
+						catch(java.io.IOException e)
+						{
+						}
+						//and lets make it executable
+						ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/cpuT_performance.sh");
+						try
+						{
+							//now for the battery settings
+							OutputStreamWriter out = new OutputStreamWriter(openFileOutput(
+									"cpuT_battery.sh", 0));
+							out.write("#! /system/bin/sh\n" +
+									  "#Set Battery Saver values to cpu_thres_table\n" +
+									  "echo 55 80 55 90 55 90 55 90 55 90 55 90 " +
+									  "60 80 60 80 60 80 60 80 60 80 60 80 60 80" +
+									  " > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
+							out.close();
+						}
+						catch(java.io.IOException e)
+						{
+						}
+						ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/cpuT_battery.sh");
+						try
+						{
+							//and finally the stock settings
+							OutputStreamWriter out = new OutputStreamWriter(openFileOutput(
+									"cpuT_stock.sh", 0));
+							out.write("#! /system/bin/sh\n" +
+									  "#Set Stock values to cpu_thres_table\n" +
+									  "echo 55 80 50 90 50 90 50 90 40 90 40 90 " +
+									  "30 80 20 70 20 70 20 70 20 70 20 70 20 70" +
+									  " > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
+							out.close();
+						}
+						catch(java.io.IOException e)
+						{
+						}
+						ShellInterface.runCommand("chmod 777 /data/data/com.shane87.controlfreak/files/cpuT_stock.sh");
+					}
+				}
+				
+				//lets set the correct type for our govSpinner adapter
+				adapterForGovSpinner.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+				//finally, lets get our list of available governors
+				String availGov = ShellInterface.getProcessOutput(C_GOVERNORS_AVAILABLE);
+				curGovernor = ShellInterface.getProcessOutput(C_CUR_GOVERNOR);
+				String[] availGovAr = availGov.split(" ");
+				
+				for(int i = 0; i < availGovAr.length; i++)
+					adapterForGovSpinner.add(availGovAr[i]);
+				
+				//now that we have our info gathered, lets let the ui refresh
+				retVal = REFRESH;
+			}
+			//if tester IS null, we do not have su, so lets send the NOROOT message to the handler
+			//so it can notify the user
+			else
+				retVal = NOROOT;
+			
+			//now we can dismiss our spinner dialog, then return
+			return retVal;
+		}
+		
+		//ok, this function is designed to take the tester string, which has our uv values in it,
+		//and our freqTable array, which has our tis info and frequency info, and use these
+		//values to set up our fqStatsList arraylist
+		private void getFreqTable(String tester, String[] freqTable)
+		{
+			//a holder for our uv values, so we can split them down into individual values
+			String[] uvTable;
+			//lets store our tester string in or uvValues global variable, so we know what values
+			//have been modified by the user when it comes time to apply/save the settings
+			uvValues = tester;
+			//some holders for the integer values of our strings
+			//I added these to help track down why it was getting the wrong values for
+			//frequency. as it turns out, SUBTRACTING 1000 does NOT give the same results
+			//as I intended, since I intended to DIVIDE by 1000, lol
+			int freq, uv, tis;
+			
+			//if we don't have any uvValues. This should never happen, since
+			//uvValues is loaded from tester, and if tester is null, we will never reach
+			//this code. but we put it here just in case, to avoid null pointer exceptions
+			if(uvValues == null)
+				//if uvValues is new, lets make uvValues equal "" so we can trigger the next if
+				uvValues = new String("");
+			
+			//again, this shouldn't happen, since a tester value of "" will cause an incompatible
+			//kernel alert, and the above code, which would also trigger this, shouldnt happen either
+			//but just in case:
+			if(uvValues.equals(""))
+			{
+				//if we have no uv values, we will instantiate our fqStatsList array with 
+				//FrequencyStats members with the following settings:
+				//value of the frequency for each state
+				//0 for uv value
+				//value of the tis for each state
+				for(int i = 0; i < freqTable.length; i += 2)
+				{
+					fqStatsList.add(new FrequencyStats(Integer.parseInt(freqTable[i]) / 1000,
+							                           0, 
+							                           Integer.parseInt(freqTable[i + 1]),
+							                           new CheckBox(getBaseContext())));
+				}
+			}
+			//else, we have uvValues, so lets get the fqStatsList setup right
+			else
+			{
+				//first, split the uvValues into individual strings, one for each freq
+				uvTable = uvValues.split(" ");
+				//now we loop through, pulling freq and tis from freqTable, and uv from uvTable
+				//i is incremented by 2 for each step, since freqTable[0] is the first freq and
+				//freqTable[1] is the tis for freqTable[0], freqTable[2] is the second freq, etc etc
+				//by using i to reference the freq, i + 1 to reference the tis, and i / 2 to access
+				//the the uv values, everything is pulled from the right place of each array
+				for(int i = 0; i < freqTable.length; i += 2)
+				{
+					freq = Integer.parseInt(freqTable[i]) / 1000;
+					uv = Integer.parseInt(uvTable[i / 2]);
+					tis = Integer.parseInt(freqTable[i + 1]);
+					//now that we have the int values of our settings, we can setup our
+					//fqStatsList entry
+					fqStatsList.add(new FrequencyStats(freq, uv, tis, new CheckBox(getBaseContext())));
+				}
+			}
+		}
+		
+		//this is used to get our time in state info, and our list of frequencies
+		//the value returned by this is used by getFreqTable to setup our fqStatsList
+		private String[] getTimeInState()
+		{
+			//ok, we will pull our tis string from the correct file, and store it in
+			//our global timeInState variable
+			timeInState = ShellInterface.getProcessOutput(C_TIME_IN_STATE);
+			
+			//this should never happen, since the return from getProcessOutput() should only
+			//be null when you have no root access, and that would be detected long before we get
+			//here. but the only thing you can always be sure of on these phones is that they
+			//will do as they please, so lets just be careful
+			if(timeInState == null)
+				timeInState = "";
+			if(timeInState == "")
+				timeInState.concat("0 0");
+			
+			//all that is left to do is spilt our timeInState string into an array, and return it
+			String[] freqTable = timeInState.split(" ");
+			return freqTable;
+		}
+		
+		//this function sets up our stockVoltages map, so we can refer to their stock value
+		//note that the "stock" value is actually their value when the app is launched, unless
+		//the kernel does not support uv, in which case the app should let them know
+		private void getFreqVoltTable()
+		{
+			//get our freq_volt_table, which has the frequencies and voltages listed
+			String freqVoltTable = ShellInterface.getProcessOutput(C_FREQUENCY_VOLTAGE_TABLE);
+			
+			//if we have no freq_volt_table, why are we still running?
+			//but it is best to be on the safe side
+			if(freqVoltTable == "")
+			{
+				stockVoltages.put("100", "950");
+				stockVoltages.put("200", "950");
+				stockVoltages.put("400", "1050");
+				stockVoltages.put("800", "1200");
+				stockVoltages.put("1000", "1275");
+				stockVoltages.put("1120", "1300");
+				stockVoltages.put("1200", "1300");
+			}
+			//otherwise, we have a freq_volt_table, so we will populate our stock voltages
+			//map with the values we just got
+			else
+			{
+				//first, lets split one string into an array, with one entry per index
+				String[] tmpFreqVoltTable = freqVoltTable.split(" ");
+				//temp holders to split the frequencies from the voltages, since they
+				//are all mixed together in our first array
+				String[] freqTable = new String[20];
+				String[] voltTable = new String[20];
+				
+				//now we loop through our freqVoltTable, and store the frequencies and 
+				//voltages as indicated above, then remove the last three zeros from the frequency
+				//and store the values in our map
+				for(int i = 0, j = 0; i < tmpFreqVoltTable.length; i += 3, j++)
+				{
+					freqTable[j] = String.valueOf(tmpFreqVoltTable[i]);
+					voltTable[j] = String.valueOf(tmpFreqVoltTable[i + 1]);
+					stockVoltages.put(freqTable[j].substring(0, freqTable[j].length() - 3),
+							voltTable[j]);
+				}
+			}
+		}
+		
+		//ok, in this function, we will get our states enabled info, so that we can
+		//set our states to the correct enabled/disabled setting
+		private boolean getStates()
+		{
+			//get the string from the states_enabled_table file
+			String statesEnabledTemp = ShellInterface.getProcessOutput(C_STATES_ENABLED);
+			
+			try
+			{
+				//we put all of this in a try catch block, instead of checking for null values
+				//split the string into an array, and if the string is null, we will get an exception
+				//to be caught, then ignored, by the catch block
+				String[] statesEnable = statesEnabledTemp.split(" ");
+				//now loop through and enable the enabled states, and disable the disabled states
+				for(int i = 0; i < fqStatsList.size(); i++)
+				{
+					if(statesEnable[i].equals("1"))
+						fqStatsList.get(i).setEnabled(true);
+					else
+						fqStatsList.get(i).setEnabled(false);
+				}
+			}catch(Exception ignored){return false;}
+			
+			//just before we return, we will set statesAvailable to true, to keep from
+			//having to call this again
+			statesAvailable = true;
+			return true;
+    	}
     }
 }
