@@ -177,7 +177,12 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		fqStatsList.get(groupPosition).getCheckBox().setOnCheckedChangeListener(listener);
 		
 		//Set the text of the tisTextView to be the formatted TIS info
-		tisText.setText(fqStatsList.get(childPosition).getTISFormat());
+		//FIXED: fixed issue of all tis values showing up the same
+		//       this did call for fqStatsList.get(childPosition), which
+		//       is always 0. That caused all of the states to have the same
+		//       TIS. Now, it calls for fqStatsList.get(groupPosition), which
+		//       is the correct way to do it, since each "group" is a state.
+		tisText.setText(fqStatsList.get(groupPosition).getTISFormat());
 		
 		//Set the starting position of the SeekBar, based on currently applied uv
 		seekBar.setProgress((200 - fqStatsList.get(groupPosition).getUV()) / 25);

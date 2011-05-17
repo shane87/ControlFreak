@@ -436,7 +436,7 @@ public class ControlFreak extends ExpandableListActivity {
     //used in VCEX to update the times every time the States drawer was opened
     //since we have no States drawer, there is currently no way to update tis info,
     //but i left this in, because I might add a main menu item to allow users
-    //to update the tis info. works basically the same as getTimeInStates() above, but
+    //to update the tis info. works basically the same as getTimeInStates() below, but
     //uses an if/else block instead of a try/catch block, and it also calls setTIS() for
     //each entry in fqStatsList, instead of putting in the value in a different function
     public void getTimes()
@@ -1099,7 +1099,7 @@ public class ControlFreak extends ExpandableListActivity {
 			//uvValues is loaded from tester, and if tester is null, we will never reach
 			//this code. but we put it here just in case, to avoid null pointer exceptions
 			if(uvValues == null)
-				//if uvValues is new, lets make uvValues equal "" so we can trigger the next if
+				//if uvValues is null, lets make uvValues equal "" so we can trigger the next if
 				uvValues = new String("");
 			
 			//again, this shouldn't happen, since a tester value of "" will cause an incompatible
