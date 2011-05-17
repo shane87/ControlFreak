@@ -17,12 +17,10 @@
 		android:orientation="horizontal" android:layout_width="fill_parent"
 		android:layout_height="wrap_content" android:layout_gravity="top">
 		
-		<CheckBox android:id="@+id/enabledCB" android:layout_width="200px"
+		<CheckBox android:id="@+id/enabledCB" android:layout_width="400px"
 			android:layout_height="wrap_content" android:textSize="20dp"
-			android:paddingLeft="60px" android:paddingRight="10px" />
-		<TextView android:id="@+id/tis" android:layout_width="200px"
-			android:layout_height="wrap_content" android:textSize="20dp"
-			android:paddingLeft="10px" android:paddingRight="10px" />
+			android:paddingLeft="60px" android:paddingRight="10px" 
+			android:gravity="center_horizontal"/>
 	
 	</LinearLayout>
 </LinearLayout>

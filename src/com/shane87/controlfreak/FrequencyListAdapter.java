@@ -131,7 +131,8 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		//progressText will hold the current uv settings readout, and will be updated as
 		//as the user adjusts the SeekBar
 		//tisText will hold the TimeInState info for this group, and will display it to the user
-		final TextView progressText, tisText;
+		//EDIT: tisText is no longer used
+		final TextView progressText;
 		//Holder for the checkbox contained in the LinearLayout loaded from module.xml,
 		//this checkbox will be filled out with the stateEnabled info from this group,
 		//and will be passed back to the FrequencyStats class as the checkBox for this
@@ -145,7 +146,9 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		//Grab the CheckBox found in module.xml
 		checkBox = (CheckBox) module.findViewById(R.id.enabledCB);
 		//Grab the TextView for tisText found in module.xml
-		tisText = (TextView) module.findViewById(R.id.tis);
+		//Removing the tis display when the state is open, since the tis is visible
+		//when the state is closed
+		//tisText = (TextView) module.findViewById(R.id.tis);
 		
 		//Set the text of this TextView to show the current uv value of this state, this will
 		//be updated as the user adjusts the seekbar
@@ -182,7 +185,10 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		//       is always 0. That caused all of the states to have the same
 		//       TIS. Now, it calls for fqStatsList.get(groupPosition), which
 		//       is the correct way to do it, since each "group" is a state.
-		tisText.setText(fqStatsList.get(groupPosition).getTISFormat());
+		//Ok, so I spent quite a bit of time trying to fix this, and now I
+		//am going to remove it, since the TIS is displayed when the state
+		//is closed and it is visible even with the state open
+		//tisText.setText(fqStatsList.get(groupPosition).getTISFormat());
 		
 		//Set the starting position of the SeekBar, based on currently applied uv
 		seekBar.setProgress((200 - fqStatsList.get(groupPosition).getUV()) / 25);
@@ -311,6 +317,10 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		//group. see getGroup(int) for details on the string format
 		String group = (String)getGroup(groupPosition);
 		
+		//--I am adding TIS info to the main group view, so users won't have to open the group
+		//--to see TIS info. First, lets get the formatted TIS string for this group
+		String tis = fqStatsList.get(groupPosition).getTISFormat();
+		
 		//if they passed us an empty view, lets fill it out, otherwise we will skip to the
 		//next step
 		if(convertView == null)
@@ -326,6 +336,10 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		//stored in the string var group
 		TextView tv = (TextView)convertView.findViewById(R.id.tvGroup);
 		tv.setText(group);
+		
+		//--Now we just need to get a pointer to the tisGroup textview, and set the correct text in it
+		TextView tisTV = (TextView)convertView.findViewById(R.id.tisGroup);
+		tisTV.setText("Time in State: " + tis);
 		
 		//return the inflated and updated view
 		return convertView;
