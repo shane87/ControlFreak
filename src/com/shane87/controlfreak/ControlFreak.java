@@ -203,13 +203,6 @@ public class ControlFreak extends ExpandableListActivity {
         //as a last step before we go to our initialization code, lets get our frequency list adapter
         frequencyAdapter = new FrequencyListAdapter(this, this.getApplicationContext());
         
-        //lets show our spinner dialog, to let the user know we are working
-        //NOTE: This dialog never shows up after switching to AsyncTask
-        //Needs to be removed?
-        final ProgressDialog spinnerDiag = ProgressDialog.show(this,
-        		"Initialization", 
-        		"Querrying System Settings", true);
-        
         //Lets get a holder for our async task class, and tell it to start working
         @SuppressWarnings("unchecked")
 		AsyncTask<ArrayAdapter<String>, Void, Integer> init = new initializer().execute(adapterForSchedSpinner, adapterForFreqSpinner, adapterForCpuTSpinner, adapterForGovSpinner);
@@ -375,10 +368,7 @@ public class ControlFreak extends ExpandableListActivity {
         showWrongKernelAlert();
         break;
         }
-        }
-        
-        spinnerDiag.dismiss();
-      
+        }      
     }
     
     //lets setup our menu when the user presses the menu button
