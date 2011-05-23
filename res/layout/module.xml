@@ -17,10 +17,9 @@
 		android:orientation="horizontal" android:layout_width="fill_parent"
 		android:layout_height="wrap_content" android:layout_gravity="top">
 		
-		<CheckBox android:id="@+id/enabledCB" android:layout_width="400px"
+		<CheckBox android:id="@+id/enabledCB" android:layout_width="fill_parent"
 			android:layout_height="wrap_content" android:textSize="20dp"
-			android:paddingLeft="60px" android:paddingRight="10px" 
-			android:gravity="center_horizontal"/>
+			android:paddingLeft="60px" android:paddingRight="10px"/>
 	
 	</LinearLayout>
 </LinearLayout>

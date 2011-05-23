@@ -86,6 +86,10 @@ public class ControlFreak extends ExpandableListActivity {
 	private String						timeInState;
 	private boolean						statesAvailable = false;
 	private ArrayAdapter<String> 		adapterForFreqSpinner;
+	//a bool variable to let functions know that we are currently loading settings
+	//this is used to let the updateFreqSpinner() know that we do NOT want to change
+	//the max cpu limit during start up
+	private boolean 					loading;
 	
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -346,7 +350,7 @@ public class ControlFreak extends ExpandableListActivity {
        
         	for(int i = 0; i < freqSpinner.getCount(); i++)
         	{
-        		if(freqSpinner.getItemAtPosition(i).toString().matches(maxCpu + " Mhz"))
+        		if(freqSpinner.getItemAtPosition(i).toString().matches(maxCpu + " MHz"))
         		{
         			freqSpinner.setSelection(i);
         			break;
@@ -465,7 +469,7 @@ public class ControlFreak extends ExpandableListActivity {
     	ShellInterface.runCommand("/data/data/com.shane87.controlfreak/files/sched.sh "
     			+ schedTable[activeSched]);
     	//Now we put our max cpu limit in the correct file
-    	ShellInterface.runCommand("echo \"" + maxFreq.split(" ")[0] 
+    	ShellInterface.runCommand("echo \"" + maxFrequency.split(" ")[0] 
     	                        + "000\" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq");
     	//Call setStates() to echo the states info to the proper file
     	setStates();
@@ -938,7 +942,7 @@ public class ControlFreak extends ExpandableListActivity {
 					//spinner
 					for(int i = 0; i < fqStatsList.size(); i++)
 						if(fqStatsList.get(i).getEnabled())
-							adapterForFreqSpinner.add(fqStatsList.get(i).getValue() + " mHz");
+							adapterForFreqSpinner.add(fqStatsList.get(i).getValue() + " MHz");
 					
 					//while we are on the subject of frequencies, lets go ahead and get our
 					//max frequency setting
@@ -951,7 +955,7 @@ public class ControlFreak extends ExpandableListActivity {
 					if(maxFreq.equals(""))
 						maxFreq.concat("0 0");
 					
-					//trim the last four digits, since the max freq file stores
+					//trim the last three digits, plus the null terminator, since the max freq file stores
 					//the frequency in kHz instead of mHz
 					maxFreq = maxFreq.substring(0, maxFreq.length() - 4);
 					
