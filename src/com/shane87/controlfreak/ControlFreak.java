@@ -86,6 +86,7 @@ public class ControlFreak extends ExpandableListActivity {
 	private String						timeInState;
 	private boolean						statesAvailable = false;
 	private ArrayAdapter<String> 		adapterForFreqSpinner;
+	private OutputStreamWriter			out;
 	//a bool variable to let functions know that we are currently loading settings
 	//this is used to let the updateFreqSpinner() know that we do NOT want to change
 	//the max cpu limit during start up
@@ -93,6 +94,8 @@ public class ControlFreak extends ExpandableListActivity {
 	
     @Override
     public void onCreate(Bundle savedInstanceState) {
+    	//Write to our log file that we are starting up
+    	log("ControlFreak starting");
     	//Request the orientation to stay vertical
     	setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
     	//Call the superclass onCreate method
@@ -204,6 +207,7 @@ public class ControlFreak extends ExpandableListActivity {
         frequencyAdapter = new FrequencyListAdapter(this, this.getApplicationContext());
         
         //Lets get a holder for our async task class, and tell it to start working
+        log("Starting AsyncTask");
         @SuppressWarnings("unchecked")
 		AsyncTask<ArrayAdapter<String>, Void, Integer> init = new initializer().execute(adapterForSchedSpinner, adapterForFreqSpinner, adapterForCpuTSpinner, adapterForGovSpinner);
         
@@ -419,6 +423,12 @@ public class ControlFreak extends ExpandableListActivity {
 			//and display it to the user
 			showAboutScreen();
 			return true;
+		}
+		case(R.id.exportlog):
+		{
+			exportLog();
+			Toast.makeText(getApplicationContext(), "cf.log exported!", Toast.LENGTH_LONG);
+			break;
 		}
 		}
 		return true;
@@ -860,6 +870,27 @@ public class ControlFreak extends ExpandableListActivity {
 		}*/
     }
     
+    private void log(String msg)
+    {
+    	try
+    	{
+    		out = new OutputStreamWriter(openFileOutput("cf.log", MODE_APPEND));
+    		out.write("ControlFreak @ " + getTS() + ": " + msg + "\n");
+    		out.close();
+    	}
+    	catch(Exception ignored){}
+    }
+    
+    private String getTS()
+    {
+    	return Long.toString(System.currentTimeMillis());
+    }
+    
+    private void exportLog()
+    {
+    	ShellInterface.runCommand("cp /data/data/com.shane87.controlfreak/files/cf.log /sdcard/cf.log");
+    }
+    
     private class initializer extends AsyncTask<ArrayAdapter<String>, Void, Integer>
     {    	
     	public ArrayAdapter<String> adapterForSchedSpinner;
@@ -883,6 +914,8 @@ public class ControlFreak extends ExpandableListActivity {
 			//otherwise, tester will stay as null
 			if(ShellInterface.isSuAvailable())
 				tester = ShellInterface.getProcessOutput(C_UV_MV_TABLE);
+			
+			log("tester val: " + tester);
 			
 			//if tester is not null, we have su, so lets continue
 			if(tester != null)
@@ -937,6 +970,7 @@ public class ControlFreak extends ExpandableListActivity {
 					//while we are on the subject of frequencies, lets go ahead and get our
 					//max frequency setting
 					maxFreq = ShellInterface.getProcessOutput(C_SCALING_MAX_FREQ);
+					log("maxFreq val: " + maxFreq);
 					//if we get a null string, we have root problems and wouldn't
 					//ever make it this far, but it is always best to check for the
 					//worst case scenario
@@ -955,6 +989,7 @@ public class ControlFreak extends ExpandableListActivity {
 					//enabled one as well
 					String schedTableTmp = ShellInterface.getProcessOutput("cat /sys/block" +
 							                                            "/mmcblk0/queue/scheduler");
+					log("schedTableTmp val: " + schedTableTmp);
 					
 					//split individual entries into an array
 					schedTable = schedTableTmp.split(" ");
@@ -980,6 +1015,7 @@ public class ControlFreak extends ExpandableListActivity {
 					//now lets find out if we support cpuThres, and if so, what one we have set
 					String cpuThresTmp = ShellInterface.getProcessOutput(
 							"cat /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table");
+					log("cpuThresTmp val: " + cpuThresTmp);
 					//if we get an empty string, we either dont have cpuThres available, or we
 					//cant get the settings, so lets set cpuThres to a negative number
 					if(cpuThresTmp.equals(""))
@@ -1055,7 +1091,9 @@ public class ControlFreak extends ExpandableListActivity {
 				adapterForGovSpinner.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
 				//finally, lets get our list of available governors
 				String availGov = ShellInterface.getProcessOutput(C_GOVERNORS_AVAILABLE);
+				log("availGov val: " + availGov);
 				curGovernor = ShellInterface.getProcessOutput(C_CUR_GOVERNOR);
+				log("curGov val: " + curGovernor);
 				String[] availGovAr = availGov.split(" ");
 				
 				for(int i = 0; i < availGovAr.length; i++)
@@ -1143,6 +1181,7 @@ public class ControlFreak extends ExpandableListActivity {
 			//ok, we will pull our tis string from the correct file, and store it in
 			//our global timeInState variable
 			timeInState = ShellInterface.getProcessOutput(C_TIME_IN_STATE);
+			log("timeInState val: " + timeInState);
 			
 			//this should never happen, since the return from getProcessOutput() should only
 			//be null when you have no root access, and that would be detected long before we get
@@ -1165,6 +1204,7 @@ public class ControlFreak extends ExpandableListActivity {
 		{
 			//get our freq_volt_table, which has the frequencies and voltages listed
 			String freqVoltTable = ShellInterface.getProcessOutput(C_FREQUENCY_VOLTAGE_TABLE);
+			log("freqVoltTable val: " + freqVoltTable);
 			
 			//if we have no freq_volt_table, why are we still running?
 			//but it is best to be on the safe side
@@ -1208,6 +1248,7 @@ public class ControlFreak extends ExpandableListActivity {
 		{
 			//get the string from the states_enabled_table file
 			String statesEnabledTemp = ShellInterface.getProcessOutput(C_STATES_ENABLED);
+			log("statesEnabledTemp val: " + statesEnabledTemp);
 			
 			try
 			{

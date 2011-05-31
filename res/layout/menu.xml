@@ -13,6 +13,10 @@
         android:title="Remove boot settings"
         android:icon="@android:drawable/ic_menu_delete"
         />
+        
+    <item android:id="@+id/exportlog"
+        android:title="Export log"
+        />
 
     <item android:id="@+id/about"
         android:icon="@android:drawable/ic_menu_info_details"
