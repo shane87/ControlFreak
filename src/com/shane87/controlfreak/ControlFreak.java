@@ -22,6 +22,7 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.SystemClock;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -1172,6 +1173,9 @@ public class ControlFreak extends ExpandableListActivity {
 					fqStatsList.add(new FrequencyStats(freq, uv, tis, new CheckBox(getBaseContext())));
 				}
 			}
+			
+			//Lets add a fqStatsList for DeepSleep
+			fqStatsList.add(new FrequencyStats(0, 0, getDeepSleep(), new CheckBox(getBaseContext())));
 		}
 		
 		//this is used to get our time in state info, and our list of frequencies
@@ -1271,5 +1275,14 @@ public class ControlFreak extends ExpandableListActivity {
 			statesAvailable = true;
 			return true;
     	}
+		
+		private int getDeepSleep()
+		{
+			int sleep = (int)(SystemClock.elapsedRealtime() - SystemClock.uptimeMillis());
+			
+			log("sleep val: " + Integer.toString(sleep));
+			
+			return sleep / 10;
+		}
     }
 }

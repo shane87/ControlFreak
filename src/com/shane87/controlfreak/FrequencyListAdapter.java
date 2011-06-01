@@ -223,6 +223,13 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 			}
 		});
 		
+		//Just before return, we will check to see if this is the DeepSleep state. If so, we will disable
+		//All of the controls in the module view
+		if(fqStatsList.get(groupPosition).getValue() == 0)
+		{
+			fqStatsList.get(groupPosition).getCheckBox().setEnabled(false);
+			seekBar.setEnabled(false);
+		}
 		//Return the view we just created
 		return module;
 	}
@@ -264,6 +271,10 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 			actualVoltage = "?";
 		}
 		
+		if(fqStatsList.get(groupPosition).getValue() == 0)
+		{
+			return "Deep Sleep";
+		}
 		//Put all of the info together in a String and return it as an Object
 		return frequencyS + " Mhz: " + stockVoltage + " - " + uV + " = " + actualVoltage + "mV";
 	}
