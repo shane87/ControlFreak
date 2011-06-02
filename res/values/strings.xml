@@ -13,11 +13,17 @@
     May work on other Galaxy S phones, but HAS NOT BEEN TESTED!!\n
     Requires proper kernel installed!!\n\n
     For more info go to XDA.\n
-    A HUGE thank you to the following:\n
+    A HUGE thank you to:\n
     existz  @ xda-developers.com\n
     y3ttr   @ xda-developers.com\n
     kodos96 @ xda-developers.com\n
+    For developing the Talon kernel, the kernel this app is designed for\n\n
+    To:\n
     xan     @ xda-developers.com\n
+    For developing the original Voltage Control, upon which this is based.\n\n
+    And to:\n
+    aalh    @ xda-developers.com\n
+    For testing this app, and helping to make sure it is as bug-free as possible.\n\n
     And to anyone who uses this app, especially if you leave feedback!!</string>
     <string name="bkernelText">You are running a incompatible kernel. To to get one head to XDA</string>
     <string name="nosuText">Your device is not rooted or you have not accepted superuser prompt. To accept launch it again. More information on XDA.</string>
@@ -29,7 +35,7 @@
 	<string name="setValues">Set values!</string>
 	<string name="mhzVoltage">Mhz voltage:</string>
 	<string name="hello">Voltage Control for Captivate</string>
-	<string name="version">0.3.9a3</string>
+	<string name="version">0.4b</string>
 	<string name="cpuThresHelp">Select the desired CPU Threshold settings. These settings affect how your CPU decides when to scale the speed up or down, and has an effect on performance and battery life</string>
 	<string name="cpuThresHelpHeader">CPU Threshold Help</string>
 	<string name="govHelpHeader">Governor Settings</string>
