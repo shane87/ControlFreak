@@ -25,6 +25,10 @@ public class FrequencyStats
 	private int 		seconds;
 	//Holder for seconds spent in state, as found by formatTIS()
 	//hours, minutes, and seconds are used to generate a string formatted as hh:mm:ss
+	private int			tisPercent;
+	//Holder for percent of time spent in this state.
+	//will be figured by the main part of the program, and passed in either by
+	//setTisPercent() or in the constructor. May be obtained with getTisPercent().
 	
 	/*************************************************************
 	 * setTIS(int) -                                             *
@@ -41,6 +45,18 @@ public class FrequencyStats
 		this.formatTIS();
 	}
 	/*************************************************************
+	 * setTisPercent(int) -                                      *
+	 * Arguments - int _tisPercent - the percent of total time   *
+	 * 								 spent in this state         *
+	 * Returns   - nothing                                       *
+	 * Outcome   - sets tisPercent for this state to be          *
+	 *             _tisPercent                                   *
+	 *************************************************************/
+	public void setTisPercent(int _tisPercent)
+	{
+		this.tisPercent = _tisPercent;
+	}
+	/*************************************************************
 	 * getTIS() -                                                *
 	 * Arguments - none                                          *
 	 * Returns   - current tis for this state, in usertime units *
@@ -49,6 +65,16 @@ public class FrequencyStats
 	public int getTIS()
 	{
 		return this.tis;
+	}
+	/*************************************************************
+	 * getTisPercent() -                                         *
+	 * Arguments - none                                          *
+	 * Returns   - tisPercent for this state                     *
+	 * Outcome   - tisPercent is returned                        *
+	 *************************************************************/
+	public int getTisPercent()
+	{
+		return this.tisPercent;
 	}
 	/*************************************************************
 	 * getTISFormat() -                                          *
@@ -263,13 +289,14 @@ public class FrequencyStats
 	 *             calls formatTIS() to fill in hours, minutes   *
 	 *             and seconds                                   *
 	 *************************************************************/
-	public FrequencyStats(int _value, int _uv, int _tis, CheckBox _checkbox)
+	public FrequencyStats(int _value, int _uv, int _tis, int _tisPercent, CheckBox _checkbox)
 	{
 		//store our arguments where they belong
 		this.value = _value;
 		this.uv = _uv;
 		this.tis = _tis;
 		this.checkbox = _checkbox;
+		this.tisPercent = _tisPercent;
 		
 		//create our listener for the checkbox
 		//this function is called anytime the checkbox is checked or unchecked

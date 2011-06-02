@@ -1128,6 +1128,8 @@ public class ControlFreak extends ExpandableListActivity {
 			//as I intended, since I intended to DIVIDE by 1000, lol
 			int freq, uv, tis;
 			
+			int[] tisPerc = getTisPercent(freqTable, getDeepSleep());
+			
 			//if we don't have any uvValues. This should never happen, since
 			//uvValues is loaded from tester, and if tester is null, we will never reach
 			//this code. but we put it here just in case, to avoid null pointer exceptions
@@ -1150,6 +1152,7 @@ public class ControlFreak extends ExpandableListActivity {
 					fqStatsList.add(new FrequencyStats(Integer.parseInt(freqTable[i]) / 1000,
 							                           0, 
 							                           Integer.parseInt(freqTable[i + 1]),
+							                           tisPerc[i / 2],
 							                           new CheckBox(getBaseContext())));
 				}
 			}
@@ -1170,12 +1173,12 @@ public class ControlFreak extends ExpandableListActivity {
 					tis = Integer.parseInt(freqTable[i + 1]);
 					//now that we have the int values of our settings, we can setup our
 					//fqStatsList entry
-					fqStatsList.add(new FrequencyStats(freq, uv, tis, new CheckBox(getBaseContext())));
+					fqStatsList.add(new FrequencyStats(freq, uv, tis, tisPerc[i/2], new CheckBox(getBaseContext())));
 				}
 			}
 			
 			//Lets add a fqStatsList for DeepSleep
-			fqStatsList.add(new FrequencyStats(0, 0, getDeepSleep(), new CheckBox(getBaseContext())));
+			fqStatsList.add(new FrequencyStats(0, 0, getDeepSleep(), tisPerc[freqTable.length], new CheckBox(getBaseContext())));
 		}
 		
 		//this is used to get our time in state info, and our list of frequencies
@@ -1283,6 +1286,35 @@ public class ControlFreak extends ExpandableListActivity {
 			log("sleep val: " + Integer.toString(sleep));
 			
 			return sleep / 10;
+		}
+		
+		private int[] getTisPercent(String[] freqTable, int deepSleep)
+		{
+			double totalTime = 0;
+			int[] tisPercents = new int[20];
+			
+			for(int i = 1; i < freqTable.length; i +=2)
+			{
+				totalTime += Double.parseDouble(freqTable[i]);
+			}
+			totalTime += deepSleep;
+			
+			for(int i = 1, j = 0; i < freqTable.length; i += 2, j++)
+			{
+				Double d = new Double((Double.parseDouble(freqTable[i]) / totalTime) * 100);
+				int whole = d.intValue();
+				if(d - whole >= 0.5)
+					d += 1;
+				tisPercents[j] = d.intValue();
+			}
+			
+			Double d = new Double((deepSleep / totalTime) * 100);
+			int whole = d.intValue();
+			if(d - whole >= 0.5)
+				d += 1;
+			tisPercents[freqTable.length] = d.intValue();
+			
+			return tisPercents;
 		}
     }
 }

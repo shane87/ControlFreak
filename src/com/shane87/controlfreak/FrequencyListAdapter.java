@@ -228,7 +228,10 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		if(fqStatsList.get(groupPosition).getValue() == 0)
 		{
 			fqStatsList.get(groupPosition).getCheckBox().setEnabled(false);
+			fqStatsList.get(groupPosition).getCheckBox().setVisibility(View.GONE);
 			seekBar.setEnabled(false);
+			seekBar.setVisibility(View.GONE);
+			progressText.setVisibility(View.GONE);
 		}
 		//Return the view we just created
 		return module;
@@ -331,6 +334,7 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		//--I am adding TIS info to the main group view, so users won't have to open the group
 		//--to see TIS info. First, lets get the formatted TIS string for this group
 		String tis = fqStatsList.get(groupPosition).getTISFormat();
+		int tisPerc = fqStatsList.get(groupPosition).getTisPercent();
 		
 		//if they passed us an empty view, lets fill it out, otherwise we will skip to the
 		//next step
@@ -350,7 +354,7 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		
 		//--Now we just need to get a pointer to the tisGroup textview, and set the correct text in it
 		TextView tisTV = (TextView)convertView.findViewById(R.id.tisGroup);
-		tisTV.setText("Time in State: " + tis);
+		tisTV.setText("Time in State: " + tis + "          " + Integer.toString(tisPerc) + "%");
 		
 		//return the inflated and updated view
 		return convertView;
