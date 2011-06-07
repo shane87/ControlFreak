@@ -35,7 +35,7 @@
 	<string name="setValues">Set values!</string>
 	<string name="mhzVoltage">Mhz voltage:</string>
 	<string name="hello">Voltage Control for Captivate</string>
-	<string name="version">0.4b</string>
+	<string name="version">0.4.1b</string>
 	<string name="cpuThresHelp">Select the desired CPU Threshold settings. These settings affect how your CPU decides when to scale the speed up or down, and has an effect on performance and battery life</string>
 	<string name="cpuThresHelpHeader">CPU Threshold Help</string>
 	<string name="govHelpHeader">Governor Settings</string>

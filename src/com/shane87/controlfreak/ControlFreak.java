@@ -462,6 +462,15 @@ public class ControlFreak extends ExpandableListActivity {
     //this is called when the user presses Apply Settings for Now
     private void applySettings()
     {
+    	//lets log the settings to be applied
+    	log("Applying settings");
+    	log(" - uv command: " + buildUVCommand());
+    	log(" - scheduler: " + schedTable[activeSched]);
+    	log(" - maxFrequency: " + maxFrequency.split(" ")[0] + "000");
+    	log(" - satesEnabled: " + buildStatesEnabledCommand());
+    	log(" - cpuThres: " + Integer.toString(cpuThres));
+    	log(" - curGovernor: " + curGovernor);
+    	
     	//first, set the uv settings, by calling buildUVCommand() and passing its string
     	//to ShellInterface
     	ShellInterface.runCommand(buildUVCommand());
@@ -558,6 +567,14 @@ public class ControlFreak extends ExpandableListActivity {
     
     //this is called when the user presses save as boot settings
     private void saveBootSettings() {
+    	//lets log the settings to be saved
+    	log("Saving to /etc/init.d/S_volt_scheduler");
+    	log(" - uv command: " + buildUVCommand());
+    	log(" - maxFrequency: " + maxFrequency.split(" ")[0] + "000");
+    	log(" - satesEnabled: " + buildStatesEnabledCommand());
+    	log(" - scheduler: " + schedTable[activeSched]);
+    	log(" - cpuThres: " + Integer.toString(cpuThres));
+    	log(" - curGovernor: " + curGovernor);
 		try 
 		{
 			//lets get an output stream writer, and create S_volt_scheduler
@@ -567,7 +584,7 @@ public class ControlFreak extends ExpandableListActivity {
 			String tmp = "#!/system/bin/sh\n\nLOG_FILE=/data/volt_scheduler.log\nrm -Rf $LOG_FILE\n\necho \"Starting Insanity Volt Scheduler $( date +\"%m-%d-%Y %H:%M:%S\" )\" | tee -a $LOG_FILE;\n\necho \"Set UV\" | tee -a $LOG_FILE; \n"
 					+ buildUVCommand()
 					+ "\necho \"\"\necho \"---------------\"\n\necho \"Set MAX Scaling Frequency\" | tee -a $LOG_FILE; \necho \""
-					+ maxFreq.split(" ")[0]
+					+ maxFrequency.split(" ")[0]
 					+ "000\" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_max_freq\necho \"\"\necho \"---------------\"\n\necho \"Select Enabled States\" | tee -a $LOG_FILE; \n"
 					+ buildStatesEnabledCommand()
 					+ "\necho \"\"\necho \"---------------\"\n\necho \"Set Scheduler for stl, bml and mmc\" | tee -a $LOG_FILE; \n    \nfor i in `ls /sys/block/stl*` /sys/block/bml* /sys/block/mmcblk* ; do\n\techo \""
@@ -890,6 +907,13 @@ public class ControlFreak extends ExpandableListActivity {
     private void exportLog()
     {
     	ShellInterface.runCommand("cp /data/data/com.shane87.controlfreak/files/cf.log /sdcard/cf.log");
+    	clearlog();
+    	log("Log exported, and cleared!");
+    }
+    
+    private void clearlog()
+    {
+    	ShellInterface.runCommand("rm /data/data/com.shane87.controlfreak/files/cf.log");
     }
     
     private class initializer extends AsyncTask<ArrayAdapter<String>, Void, Integer>
