@@ -832,8 +832,7 @@ public class ControlFreak extends ExpandableListActivity {
 		Context cont = getApplicationContext();
 		
 		findViewById(R.id.SlidingDrawer).setVisibility(View.INVISIBLE);
-		/*
-		String test = ShellInterface.getProcessOutput(C_GOV_TWEAKS_AVAIL);
+		/*String test = ShellInterface.getProcessOutput(C_GOV_TWEAKS_AVAIL);
 		if(test == "")
 		{
 			findViewById(R.id.SlidingDrawer).setVisibility(View.INVISIBLE);
@@ -880,6 +879,20 @@ public class ControlFreak extends ExpandableListActivity {
 				rllp = new RelativeLayout.LayoutParams(475, RelativeLayout.LayoutParams.WRAP_CONTENT);
 				rllp.addRule(RelativeLayout.BELOW, 1);
 				rl.addView(et, rllp);
+			}
+			else if(curGovernor.contains("ondemand"))
+			{
+				CheckBox CBignoreNiceLoad;
+				TextView TVupThresh;
+				EditText ETupThresh;
+				
+				CBignoreNiceLoad = new CheckBox(cont);
+				TVupThresh = new TextView(cont);
+				ETupThresh = new EditText(cont);
+				
+				CBignoreNiceLoad.setText("Ignore Nice Load");
+				TVupThresh.setText("Up-Threshold: ");
+				ETupThresh.setText(ShellInterface.getProcessOutput("toolbox cat /sys/devices/system/cpu/cpufreq/ondemand/up_thresh"));
 			}
 			else
 			{
@@ -1315,7 +1328,7 @@ public class ControlFreak extends ExpandableListActivity {
 		private int[] getTisPercent(String[] freqTable, int deepSleep)
 		{
 			double totalTime = 0;
-			int[] tisPercents = new int[20];
+			int[] tisPercents = new int[25];
 			
 			for(int i = 1; i < freqTable.length; i +=2)
 			{

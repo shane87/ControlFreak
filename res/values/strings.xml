@@ -24,6 +24,7 @@
     And to:\n
     aalh    @ xda-developers.com\n
     For testing this app, and helping to make sure it is as bug-free as possible.\n\n
+    Also, a HUGE Thank you and shoutout to b_randon14, my brother, for creating the sick new icon!\n\n
     And to anyone who uses this app, especially if you leave feedback!!</string>
     <string name="bkernelText">You are running a incompatible kernel. To to get one head to XDA</string>
     <string name="nosuText">Your device is not rooted or you have not accepted superuser prompt. To accept launch it again. More information on XDA.</string>
@@ -35,7 +36,7 @@
 	<string name="setValues">Set values!</string>
 	<string name="mhzVoltage">Mhz voltage:</string>
 	<string name="hello">Voltage Control for Captivate</string>
-	<string name="version">0.4.1b</string>
+	<string name="version">0.4.2b</string>
 	<string name="cpuThresHelp">Select the desired CPU Threshold settings. These settings affect how your CPU decides when to scale the speed up or down, and has an effect on performance and battery life</string>
 	<string name="cpuThresHelpHeader">CPU Threshold Help</string>
 	<string name="govHelpHeader">Governor Settings</string>
