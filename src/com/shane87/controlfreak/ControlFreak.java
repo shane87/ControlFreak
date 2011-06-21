@@ -93,6 +93,11 @@ public class ControlFreak extends ExpandableListActivity {
 	//the max cpu limit during start up
 	private boolean 					loading;
 	
+	//These vars are for the GPU oc settings
+	private String[] 					stockGPUVals = new String[20];
+	private String[]					curGPUVals = new String[20];
+	private boolean						gpuAvail;
+	
     @Override
     public void onCreate(Bundle savedInstanceState) {
     	//Write to our log file that we are starting up
@@ -470,6 +475,7 @@ public class ControlFreak extends ExpandableListActivity {
     	log(" - satesEnabled: " + buildStatesEnabledCommand());
     	log(" - cpuThres: " + Integer.toString(cpuThres));
     	log(" - curGovernor: " + curGovernor);
+    	log(" - gpuVals: " + buildGpuCommand());
     	
     	//first, set the uv settings, by calling buildUVCommand() and passing its string
     	//to ShellInterface
@@ -492,9 +498,32 @@ public class ControlFreak extends ExpandableListActivity {
     		ShellInterface.runCommand("/data/data/com.shane87.controlfreak/files/cpuT_battery.sh");
     	//Echo our currently selected governor to the correct file
     	ShellInterface.runCommand("echo \"" + curGovernor + "\" > /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor");
+    	//Call shellInterface.runCommand, and pass it our gpu command
+    	ShellInterface.runCommand(buildGpuCommand());
     	//finally, echo 1 to the update_states file, so the kernel knows to use our new
     	//settings
     	ShellInterface.runCommand("echo 1 > /sys/devices/system/cpu/cpu0/cpufreq/update_states");
+    }
+    
+    //This function builds the command to change gpu settings
+    private String buildGpuCommand()
+    {
+    	StringBuilder command = new StringBuilder();
+    	command.append("echo \"");
+    	
+    	for(int i = 0; i < fqStatsList.size(); i++)
+    	{
+    		if(fqStatsList.get(i).getValue() == 0)
+    			break;
+    		command.append(fqStatsList.get(i).getStockGpu());
+    		command.append(" ");
+    		command.append(fqStatsList.get(i).getCurGpu());
+    		command.append(" ");
+    	}
+    	
+    	command.append("\" > /sys/devices/system/cpu/cpu0/cpufreq/gpu_clock_table");
+    	
+    	return command.toString();
     }
     
     //this function builds our states enabled command, which is used by setStates() to set the
@@ -509,6 +538,8 @@ public class ControlFreak extends ExpandableListActivity {
     	//states
     	for(int i = 0; i < fqStatsList.size(); i++)
     	{
+    		if(fqStatsList.get(i).getValue() == 0)
+    			break;
     		if(fqStatsList.get(i).getEnabled())
     			command.append("1 ");
     		else
@@ -575,6 +606,7 @@ public class ControlFreak extends ExpandableListActivity {
     	log(" - scheduler: " + schedTable[activeSched]);
     	log(" - cpuThres: " + Integer.toString(cpuThres));
     	log(" - curGovernor: " + curGovernor);
+    	log(" - gpuCommand: " + buildGpuCommand());
 		try 
 		{
 			//lets get an output stream writer, and create S_volt_scheduler
@@ -611,12 +643,17 @@ public class ControlFreak extends ExpandableListActivity {
 						" > /sys/devices/system/cpu/cpu0/cpufreq/cpu_thres_table" +
 						"\necho \"Settings saved!\" | tee -a $LOG_FILE;\n");
 			
-			//finally, add the governor settings
+			//add the governor settings
 			tmp = tmp.concat("\necho \"Setting current governor\" | tee -a $LOG_FILE;\n" +
 							 "echo \"" + curGovernor + "\" >" +
 							 " /sys/devices/system/cpu/cpu0/cpufreq/scaling_governor\n" +
 			
 			"echo \"Current Governor Set\" | tee -a $LOG_FILE;\n");
+			
+			//Finally, add the gpu commands
+			tmp = tmp.concat("\necho \"Setting gpu clock settings\" | tee -a $LOG_FILE;\n" +
+					         buildGpuCommand() + "\n"+
+					         "echo \"GPU Clock Set\" | tee -a $LOG_FILE;\n");
 			//write the tmp string to the file and close the file
 			out.write(tmp);
 			out.close();
@@ -973,8 +1010,11 @@ public class ControlFreak extends ExpandableListActivity {
 					//now lets get our frequency list and tis info from getTimeInState()
 					String[] freqTable = getTimeInState();
 					
+					//just before we call getFreqTable, lets get our gpu vals, if they are available
+					getGPUVals();
+					
 					//then we can pass our tester string and the info returned above to store our
-					//frequencies and voltages in or fqStatsList
+					//frequencies and voltages in our fqStatsList
 					getFreqTable(tester, freqTable);
 					
 					//we need to check our states enabled table, to find out which states are
@@ -1148,6 +1188,45 @@ public class ControlFreak extends ExpandableListActivity {
 			//now we can dismiss our spinner dialog, then return
 			return retVal;
 		}
+    	
+    	//this function will get our current and stock gpu values, for modification later
+    	//note that this has a void return type, since it will simply pull the gpu settings
+    	//and save them in global vars, along with a global bool var to disable gpu controls
+    	//if the kernel does not support gpu oc
+    	private void getGPUVals()
+    	{
+    		//get the raw value from gpu_clock_table and store it in test, then log it
+    		String test = ShellInterface.getProcessOutput("toolbox cat /sys/devices/system/cpu/cpu0/cpufreq/gpu_clock_table");
+    		log("getGPUVals: test val: " + test);
+    		
+    		//if we get nothing back from getProcessOutput, we do not have gpu oc abaility, so
+    		//set gpuAvail to false, so we can check later to be able to disable gpu oc controls
+    		if(test == "")
+    		{
+    			gpuAvail = false;
+    			return;
+    		}
+    		//else we have gpu oc ability, so lets get to it
+    		else
+    		{
+    			//set gpuAvail to true
+    			gpuAvail = true;
+    			//split the raw values into an array of individual values
+    			String[] testAr = test.split(" ");
+    			//loop through the values, starting at val 0, and jumping to 2, etc,
+    			//to get the stock gpu settings
+    			for(int i = 0, j = 0; i < testAr.length; i += 2, j++)
+    			{
+    				stockGPUVals[j] = testAr[i];    					
+    			}
+    			//loop through the values again, starting at 1 and jumping to 3, etc,
+    			//to get the current gpu vals;
+    			for(int i = 1, j = 0; i < testAr.length; i += 2, j++)
+    			{
+    				curGPUVals[j] = testAr[i];
+    			}
+    		}
+    	}
 		
 		//ok, this function is designed to take the tester string, which has our uv values in it,
 		//and our freqTable array, which has our tis info and frequency info, and use these
@@ -1190,10 +1269,34 @@ public class ControlFreak extends ExpandableListActivity {
 							                           0, 
 							                           Integer.parseInt(freqTable[i + 1]),
 							                           tisPerc[i / 2],
-							                           new CheckBox(getBaseContext())));
+							                           new CheckBox(getBaseContext()),
+													   Integer.parseInt(curGPUVals[i / 2]),
+													   Integer.parseInt(stockGPUVals[i / 2])));
 				}
 			}
-			//else, we have uvValues, so lets get the fqStatsList setup right
+			//else if gpuAvail, we have uvValues, so lets get the fqStatsList setup right and we have
+			//gpuSettings, so lets add those
+			else if(gpuAvail)
+			{
+				//first, split the uvValues into individual strings, one for each freq
+				uvTable = uvValues.split(" ");
+				//now we loop through, pulling freq and tis from freqTable, and uv from uvTable
+				//i is incremented by 2 for each step, since freqTable[0] is the first freq and
+				//freqTable[1] is the tis for freqTable[0], freqTable[2] is the second freq, etc etc
+				//by using i to reference the freq, i + 1 to reference the tis, and i / 2 to access
+				//the the uv values, everything is pulled from the right place of each array
+				for(int i = 0; i < freqTable.length; i += 2)
+				{
+					freq = Integer.parseInt(freqTable[i]) / 1000;
+					uv = Integer.parseInt(uvTable[i / 2]);
+					tis = Integer.parseInt(freqTable[i + 1]);
+					//now that we have the int values of our settings, we can setup our
+					//fqStatsList entry
+					fqStatsList.add(new FrequencyStats(freq, uv, tis, tisPerc[i/2], new CheckBox(getBaseContext()), Integer.parseInt(curGPUVals[i / 2]), Integer.parseInt(stockGPUVals[i / 2])));
+				}
+			}
+			
+			//else we have uvValues but no gpuVals, so lets set it up with 0 as gpuVals
 			else
 			{
 				//first, split the uvValues into individual strings, one for each freq
@@ -1210,12 +1313,12 @@ public class ControlFreak extends ExpandableListActivity {
 					tis = Integer.parseInt(freqTable[i + 1]);
 					//now that we have the int values of our settings, we can setup our
 					//fqStatsList entry
-					fqStatsList.add(new FrequencyStats(freq, uv, tis, tisPerc[i/2], new CheckBox(getBaseContext())));
+					fqStatsList.add(new FrequencyStats(freq, uv, tis, tisPerc[i/2], new CheckBox(getBaseContext()), 0, 0));
 				}
 			}
 			
 			//Lets add a fqStatsList for DeepSleep
-			fqStatsList.add(new FrequencyStats(0, 0, getDeepSleep(), tisPerc[freqTable.length], new CheckBox(getBaseContext())));
+			fqStatsList.add(new FrequencyStats(0, 0, getDeepSleep(), tisPerc[freqTable.length], new CheckBox(getBaseContext()), 0, 0));
 		}
 		
 		//this is used to get our time in state info, and our list of frequencies

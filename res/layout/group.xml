@@ -11,6 +11,11 @@
             android:paddingLeft="5dip" android:paddingRight="5dip" android:layout_marginLeft="38dp"
             android:textSize="14dip"></TextView>
             
+  <TextView android:id="@+id/tvGpu" android:layout_width="fill_parent"
+            android:layout_height="30dip" android:text="GPU Clock: xxxMHz +/- xxMHz = xxxMHz" android:gravity="center_vertical|left"
+            android:paddingLeft="5dip" android:paddingRight="5dip" android:layout_marginLeft="38dp"
+            android:textSize="14dip"></TextView>
+            
   <TextView android:id="@+id/tisGroup" android:layout_width="fill_parent"
             android:layout_height="30dip" android:text="Group TIS" android:gravity="center_vertical|left"
             android:paddingLeft="5dip" android:paddingRight="5dip" android:layout_marginLeft="38dp"

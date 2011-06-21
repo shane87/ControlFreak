@@ -6,9 +6,18 @@
 
 	<TextView android:layout_width="wrap_content"
 		android:layout_height="wrap_content" android:layout_gravity="center_horizontal"
-		android:id="@+id/freq_voltageTxt" android:textSize="30dp" />
+		android:id="@+id/freq_voltageTxt"/>
 	<SeekBar android:layout_height="wrap_content"
 		android:layout_width="fill_parent" android:id="@+id/freqSB"
+		android:paddingTop="20dp" android:paddingLeft="40dp"
+		android:paddingBottom="10dp"
+		android:paddingRight="40dp" android:max="8" />
+		
+	<TextView android:layout_width="wrap_content"
+		android:layout_height="wrap_content" android:layout_gravity="center_horizontal"
+		android:id="@+id/gpuTxt" android:text="xMHz"/>
+	<SeekBar android:layout_height="wrap_content"
+		android:layout_width="fill_parent" android:id="@+id/gpuSB"
 		android:paddingTop="20dp" android:paddingLeft="40dp"
 		android:paddingBottom="10dp"
 		android:paddingRight="40dp" android:max="8" />

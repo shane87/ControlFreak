@@ -29,7 +29,30 @@ public class FrequencyStats
 	//Holder for percent of time spent in this state.
 	//will be figured by the main part of the program, and passed in either by
 	//setTisPercent() or in the constructor. May be obtained with getTisPercent().
+	private int 		curGpuVal;
+	//Holder for current gpu clock value. Will be obtained by the main program, and
+	//passed in by the constructor or setCurGpu(). May be obtained by calling
+	//getCurGpu()
+	private int			stockGpuVal;
+	//Holder for stock gpu clock value. Same as above, passed in with constructor or
+	//setStockGpu{}. Obtained with getStockGpu()
 	
+	public void setCurGpu(int _curGpuVal)
+	{
+		this.curGpuVal = _curGpuVal;
+	}
+	public void setStockGpu(int _stockGpuVal)
+	{
+		this.stockGpuVal = _stockGpuVal;
+	}
+	public int getCurGpu()
+	{
+		return this.curGpuVal;
+	}
+	public int getStockGpu()
+	{
+		return this.stockGpuVal;
+	}
 	/*************************************************************
 	 * setTIS(int) -                                             *
 	 * Arguments - int _tis - the time in state for this state,  *
@@ -289,7 +312,7 @@ public class FrequencyStats
 	 *             calls formatTIS() to fill in hours, minutes   *
 	 *             and seconds                                   *
 	 *************************************************************/
-	public FrequencyStats(int _value, int _uv, int _tis, int _tisPercent, CheckBox _checkbox)
+	public FrequencyStats(int _value, int _uv, int _tis, int _tisPercent, CheckBox _checkbox, int _curGpuVal, int _stockGpuVal)
 	{
 		//store our arguments where they belong
 		this.value = _value;
@@ -297,6 +320,8 @@ public class FrequencyStats
 		this.tis = _tis;
 		this.checkbox = _checkbox;
 		this.tisPercent = _tisPercent;
+		this.curGpuVal = _curGpuVal;
+		this.stockGpuVal = _stockGpuVal;
 		
 		//create our listener for the checkbox
 		//this function is called anytime the checkbox is checked or unchecked

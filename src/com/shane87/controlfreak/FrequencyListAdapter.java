@@ -126,13 +126,15 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		//allows us to change the SeekBar position, and register for notifications about
 		//the state of the SeekBar, such as its current position, and how far it has been moved
 		//by the user
-		final SeekBar seekBar;
+		//gpuSeekBar is a pointer to the gpuSB seekbar defined in module.xml
+		final SeekBar seekBar, gpuSeekBar;
 		//Holders for the TextViews contained in the LinearLayout loaded from module.xml,
 		//progressText will hold the current uv settings readout, and will be updated as
 		//as the user adjusts the SeekBar
 		//tisText will hold the TimeInState info for this group, and will display it to the user
 		//EDIT: tisText is no longer used
-		final TextView progressText;
+		//gpuProgText is a TV holder for the textView to show the current gpu setting
+		final TextView progressText, gpuProgText;
 		//Holder for the checkbox contained in the LinearLayout loaded from module.xml,
 		//this checkbox will be filled out with the stateEnabled info from this group,
 		//and will be passed back to the FrequencyStats class as the checkBox for this
@@ -149,10 +151,17 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		//Removing the tis display when the state is open, since the tis is visible
 		//when the state is closed
 		//tisText = (TextView) module.findViewById(R.id.tis);
+		//Grab the seekbar for gpu settings in module.xml
+		gpuSeekBar = (SeekBar)module.findViewById(R.id.gpuSB);
+		//Grab the gpuTxt TexView from module.xml
+		gpuProgText = (TextView)module.findViewById(R.id.gpuTxt);
 		
 		//Set the text of this TextView to show the current uv value of this state, this will
 		//be updated as the user adjusts the seekbar
 		progressText.setText(Integer.toString(fqStatsList.get(groupPosition).getUV()) + " mV");
+		//Set the text of gpuProgText to the current gpu clock speed for this state. This will
+		//be updated as the user adjusts the gpu seekbar
+		gpuProgText.setText(Integer.toString(fqStatsList.get(groupPosition).getCurGpu()) + "MHz");
 		
 		//Pass FrequencyStats the reference to the checkbox from module.xml
 		fqStatsList.get(groupPosition).setCheckBox(checkBox);
@@ -192,6 +201,8 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		
 		//Set the starting position of the SeekBar, based on currently applied uv
 		seekBar.setProgress((200 - fqStatsList.get(groupPosition).getUV()) / 25);
+		//Set the starting position of the gpuSeekBar based on cur gpu value
+		gpuSeekBar.setProgress((fqStatsList.get(groupPosition).getCurGpu() - fqStatsList.get(groupPosition).getStockGpu()) / 25);
 		//Build our listener for this seekbar, and link it to the seekbar at the same time
 		seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() 
 		{
@@ -222,6 +233,28 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 				
 			}
 		});
+		//Build the listener for the gpu seek bar, and link it to the seek bar
+		gpuSeekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+			
+			@Override
+			public void onStopTrackingTouch(SeekBar seekBar) {
+				
+			}
+			
+			@Override
+			public void onStartTrackingTouch(SeekBar seekBar) {
+				
+			}
+			
+			@Override
+			public void onProgressChanged(SeekBar seekBar, int progress,
+					boolean fromUser) {
+				int tmpStock = fqStatsList.get(groupPosition).getStockGpu();
+				gpuProgText.setText(Integer.toString(tmpStock + 25 * progress) + "MHz");
+				fqStatsList.get(groupPosition).setCurGpu(tmpStock + 25 * progress);
+				
+			}
+		});
 		
 		//Just before return, we will check to see if this is the DeepSleep state. If so, we will disable
 		//All of the controls in the module view
@@ -232,6 +265,15 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 			seekBar.setEnabled(false);
 			seekBar.setVisibility(View.GONE);
 			progressText.setVisibility(View.GONE);
+			module.findViewById(R.id.gpuSB).setVisibility(View.GONE);
+			module.findViewById(R.id.gpuTxt).setVisibility(View.GONE);
+		}
+		
+		//if we have no gpuSettings avail, i.e. stockGpuVal == 0, lets disable the gpu controls and remove them
+		if(fqStatsList.get(groupPosition).getStockGpu() == 0)
+		{
+			gpuSeekBar.setVisibility(View.GONE);
+			gpuProgText.setVisibility(View.GONE);
 		}
 		//Return the view we just created
 		return module;
@@ -336,6 +378,11 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		String tis = fqStatsList.get(groupPosition).getTISFormat();
 		int tisPerc = fqStatsList.get(groupPosition).getTisPercent();
 		
+		//Lets create the GPU Status String to be displayed between uv settings and tis info
+		//First, lets get the difference between stock and cur gpu settings
+		int diff = fqStatsList.get(groupPosition).getCurGpu() - fqStatsList.get(groupPosition).getStockGpu();
+		String gpuTxt = "GPU Clock: " + Integer.toString(fqStatsList.get(groupPosition).getStockGpu()) + "MHz + " + Integer.toString(diff) + "MHz = " + Integer.toString(fqStatsList.get(groupPosition).getCurGpu()) + "MHz";
+		
 		//if they passed us an empty view, lets fill it out, otherwise we will skip to the
 		//next step
 		if(convertView == null)
@@ -352,9 +399,22 @@ public class FrequencyListAdapter extends BaseExpandableListAdapter
 		TextView tv = (TextView)convertView.findViewById(R.id.tvGroup);
 		tv.setText(group);
 		
+		//Get a refference to the tvGpu found in group.xml, and set the text appropriately
+		//and see if we are on the deep sleep state. if so, set tvGpu text to ""
+		TextView tvGpu = (TextView)convertView.findViewById(R.id.tvGpu);
+		if(fqStatsList.get(groupPosition).getValue() == 0)
+			tvGpu.setText("");
+		else
+			tvGpu.setText(gpuTxt);
+		
 		//--Now we just need to get a pointer to the tisGroup textview, and set the correct text in it
 		TextView tisTV = (TextView)convertView.findViewById(R.id.tisGroup);
 		tisTV.setText("Time in State: " + tis + "          " + Integer.toString(tisPerc) + "%");
+		
+		if(fqStatsList.get(groupPosition).getStockGpu() == 0)
+		{
+			convertView.findViewById(R.id.tvGpu).setVisibility(View.GONE);
+		}
 		
 		//return the inflated and updated view
 		return convertView;
